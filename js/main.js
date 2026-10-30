@@ -52,6 +52,10 @@ scene.onBeforeRenderObservable.add(() => {
     const pts = flight.pts;
     const p = pts[Math.min(i, pts.length - 1)];
     ball.position.copyFrom(p); shadow.position.set(p.x, 0.03, p.z);
+    // 공 그림자는 높이 뜰수록 크고 옅게, 떨어질 지점 표시는 깜빡이듯 커졌다 작아진다
+    const hgt = Math.max(0, p.y);
+    shadow.scaling.setAll(1 + hgt * 0.06); shadow.visibility = clamp(1 - hgt / 40, 0.35, 1);
+    landMark.scaling.setAll(1.6 + Math.sin(t / 120) * 0.5);
     camTgt = BABYLON.Vector3.Lerp(camTgt, new BABYLON.Vector3(p.x, Math.max(1, p.y * 0.6), Math.max(p.z, 8)), 0.08);
     camPos = BABYLON.Vector3.Lerp(camPos, camHome.pos, 0.08);
     cam.fov += (camHome.fov - cam.fov) * 0.08;
@@ -62,6 +66,10 @@ scene.onBeforeRenderObservable.add(() => {
     camPos = BABYLON.Vector3.Lerp(camPos, v.pos, 0.08);
     cam.fov += (v.fov - cam.fov) * 0.08;
   }
+  // 공이 숨으면 꼬리도 숨긴다. 타격 시점에서는 공이 홈플레이트를 지나 카메라 앞으로 오면 꼬리가 화면을 덮으니 숨긴다
+  if (ballTrail) ballTrail.isVisible = ball.isVisible && !(S.mode === 'bat' && !flight && ball.position.z < 0.3);
+  ballHalo.isVisible = ball.isVisible;
+  if (!flight) { shadow.scaling.setAll(1); shadow.visibility = 1; landMark.scaling.setAll(1); }
   cam.position.copyFrom(camPos);
   cam.setTarget(camTgt);
 

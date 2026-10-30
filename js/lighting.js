@@ -64,6 +64,7 @@ const fieldLights = [[0, 55, 20], [0, 60, 85]].map(([x, y, z], i) => {
 const glow = new BABYLON.GlowLayer('glow', scene, { mainTextureRatio: 0.25, blurKernelSize: 32 });
 glow.intensity = NIGHT.glow;
 lampFaces.forEach(f => glow.addIncludedOnlyMesh(f));
+glow.addIncludedOnlyMesh(ballHalo);   // 밤에는 공 테두리도 은은하게 빛난다
 glow.isEnabled = false;
 
 // 낮 조명 값(밤에서 낮으로 돌아갈 때 씀)

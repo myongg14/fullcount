@@ -80,9 +80,50 @@ zoneFrame.setEnabled(false);
 const hitPlane = BABYLON.MeshBuilder.CreatePlane('hp', { width: 6, height: 4 }, scene);
 hitPlane.position.set(0, 1, 0); hitPlane.rotation.y = Math.PI; hitPlane.visibility = 0; hitPlane.isPickable = true;
 
-const ball = BABYLON.MeshBuilder.CreateSphere('ball', { diameter: 0.09, segments: 12 }, scene);
+// ---------- 공 (눈으로 따라가기 쉽게) ----------
+const BALL_VIEW = {
+  size: 0.11,          // 공 지름(m). 실제 공(약 0.074m)의 1.5배쯤
+  halo: true,          // 공 둘레에 얇게 빛나는 테두리
+  trail: true,         // 공 뒤 짧은 꼬리
+  trailLength: 12,     // 꼬리 길이(프레임 수, 1초 60프레임 기준)
+  trailWidth: 0.045,   // 꼬리 굵기(m)
+  pitchViewTrail: { width: 0.02, length: 8 },   // 투수 시점: 카메라 가까이서 던지므로 가늘고 짧게
+  pitchColors: false,  // true면 구종마다 꼬리 색이 다름(아래 TRAIL_COLORS)
+};
+const TRAIL_COLORS = {
+  pitch: '#ffffff', hit: '#ffd23f',
+  // 구종별(pitchColors가 true일 때): 직구 계열 흰색, 슬라이더 계열 하늘색, 커브 계열 보라, 떨어지는 공 초록, 너클 주황, 이퓨스 분홍
+  four: '#ffffff', two: '#ffffff', sinker: '#ffffff', cutter: '#9fd8ff',
+  slider: '#9fd8ff', sweeper: '#9fd8ff', slurve: '#c9a6ff', curve: '#c9a6ff', kcurve: '#c9a6ff',
+  change: '#9ff0b0', circle: '#9ff0b0', splitter: '#9ff0b0', fork: '#9ff0b0', palm: '#9ff0b0', screw: '#9ff0b0',
+  knuckle: '#ffb36b', eephus: '#ff9fd0',
+};
+const ball = BABYLON.MeshBuilder.CreateSphere('ball', { diameter: BALL_VIEW.size, segments: 12 }, scene);
 ball.material = mat('#ffffff', { emissive: '#bbbbbb' }); ball.isVisible = false;
-const shadow = BABYLON.MeshBuilder.CreateDisc('sh', { radius: 0.07, tessellation: 16 }, scene);
+const ballHalo = BABYLON.MeshBuilder.CreateSphere('ballHalo', { diameter: BALL_VIEW.size * 1.45, segments: 10 }, scene);
+{
+  const hm = new BABYLON.StandardMaterial('haloMat', scene);
+  hm.emissiveColor = BABYLON.Color3.FromHexString('#fff4b8'); hm.diffuseColor = new BABYLON.Color3(0, 0, 0);
+  hm.disableLighting = true; hm.alpha = 0.4;
+  ballHalo.material = hm;
+}
+ballHalo.parent = ball; ballHalo.isPickable = false; ballHalo.setEnabled(BALL_VIEW.halo);
+// 꼬리: 공을 새로 던지거나 칠 때마다 새로 만든다(이전 위치에서 긴 선이 그어지지 않게)
+let ballTrail = null;
+const trailMat = new BABYLON.StandardMaterial('trailMat', scene);
+trailMat.diffuseColor = new BABYLON.Color3(0, 0, 0); trailMat.disableLighting = true; trailMat.alpha = 0.55;
+const startTrail = kind => {
+  if (ballTrail) { ballTrail.dispose(); ballTrail = null; }
+  if (!BALL_VIEW.trail) return;
+  const hex = TRAIL_COLORS[kind === 'hit' || !BALL_VIEW.pitchColors ? (kind === 'hit' ? 'hit' : 'pitch') : kind] || '#ffffff';
+  trailMat.emissiveColor = BABYLON.Color3.FromHexString(hex);
+  ball.computeWorldMatrix(true);   // 방금 옮긴 공 위치에서 꼬리가 시작되게
+  const near = S.mode === 'pitch' && kind !== 'hit';
+  ballTrail = new BABYLON.TrailMesh('ballTrail', ball, scene,
+    near ? BALL_VIEW.pitchViewTrail.width : BALL_VIEW.trailWidth, near ? BALL_VIEW.pitchViewTrail.length : BALL_VIEW.trailLength, true);
+  ballTrail.material = trailMat; ballTrail.isPickable = false;
+};
+const shadow = BABYLON.MeshBuilder.CreateDisc('sh', { radius: 0.08, tessellation: 16 }, scene);
 shadow.rotation.x = Math.PI / 2; shadow.material = mat('#000000', { alpha: 0.35 }); shadow.isVisible = false;
 const landMark = BABYLON.MeshBuilder.CreateDisc('lm', { radius: 0.12, tessellation: 20 }, scene);
 landMark.rotation.x = Math.PI / 2; landMark.material = mat('#ffc23d', { emissive: '#ffc23d' }); landMark.isVisible = false;

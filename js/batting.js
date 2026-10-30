@@ -124,7 +124,11 @@ const resolveSwing = () => {
 const launchFlight = (res, sub) => {
   S.phase = 'flight';
   flight = { res, sub, t0: now(), pts: res.fl.pts };
+  ball.position.copyFrom(res.fl.pts[0]);
   ball.isVisible = true; shadow.isVisible = true;
+  startTrail('hit');
+  // 떨어질 지점을 미리 보여 준다
+  landMark.position.set(res.fl.land.x, 0.04, res.fl.land.z); landMark.isVisible = true;
 };
 const finishFlight = () => {
   const { res, sub } = flight; flight = null;
