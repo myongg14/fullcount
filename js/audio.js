@@ -3,7 +3,7 @@
 // ---------- 설정 ----------
 const sound = { on: true, volume: 0.8 };   // 메뉴·일시정지 화면에서 바꾼다
 const AUDIO_TUNING = {
-  ambient: 0.05,      // 평소 관중 웅성거림 크기
+  ambient: 0,         // 평소 관중 웅성거림(배경음) 크기. 0이면 끔(원래 0.05)
   cheer: [0, 0.18, 0.32, 0.5],   // 함성 크기: 1 = 삼진, 2 = 안타, 3 = 홈런
   cheerSec: [0, 1.4, 2.2, 3.8],  // 함성 길이(초)
   bat: 0.9,           // 타격음 크기
@@ -49,6 +49,7 @@ const envGain = (t, peak, attack, decay) => {
 
 // 평소 관중 웅성거림: 낮게 거른 잡음 + 천천히 커졌다 작아졌다
 const startAmbient = () => {
+  if (!AUDIO_TUNING.ambient) return;
   const src = noiseSrc(true), bp = filter('bandpass', 420, 0.6), lp = filter('lowpass', 1100);
   ambientGain = actx.createGain(); ambientGain.gain.value = AUDIO_TUNING.ambient;
   const lfo = actx.createOscillator(), lfoGain = actx.createGain();

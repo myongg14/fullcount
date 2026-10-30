@@ -2,8 +2,9 @@
 
 // ---------- 매 프레임 ----------
 let swingAnim = 0;
-// 카메라: 타격은 포수 뒤, 투구는 투수 뒤 어깨 높이(글러브 쪽)에서 존을 확대해서 본다. 숫자를 바꿔 조절
-const PITCH_VIEW = { fov: 0.13, back: 2.5, side: 0.9, height: 1.8 };
+// 카메라: 타격은 포수 뒤, 투구는 투수 뒤 던지는 팔 쪽 위에서 존을 확대해서 본다. 숫자를 바꿔 조절
+// side가 음수면 던지는 팔 쪽(공이 나오는 곳 바로 뒤). 양수(글러브 쪽)로 두면 공이 타자 앞을 가로질러 오는 것처럼 보인다
+const PITCH_VIEW = { fov: 0.13, back: 2.5, side: -0.55, height: 2.1 };
 const camHome = { pos: new BABYLON.Vector3(0, 1.35, -4.6), tgt: new BABYLON.Vector3(0, 0.5, MOUND_Z), fov: 0.55 };
 const pitchView = () => ({
   pos: new BABYLON.Vector3(PITCH_VIEW.side * pitchHand, PITCH_VIEW.height, MOUND_Z + PITCH_VIEW.back),

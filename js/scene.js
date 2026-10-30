@@ -136,8 +136,8 @@ const toScreen = v => {
   return { x: r.left + p.x * k, y: r.top + p.y * k };
 };
 const pickPlate = (cx, cy) => {
+  // scene.pick은 CSS 픽셀 좌표를 받는다(화면 배율은 엔진이 알아서 처리). 배율을 곱하면 iPad처럼 2배 화면에서 아래·오른쪽으로 크게 빗나간다
   const r = canvas.getBoundingClientRect();
-  const k = engine.getRenderWidth() / canvas.clientWidth;
-  const pk = scene.pick((cx - r.left) * k, (cy - r.top) * k, m => m === hitPlane);
+  const pk = scene.pick(cx - r.left, cy - r.top, m => m === hitPlane);
   return pk && pk.hit ? pk.pickedPoint : null;
 };
