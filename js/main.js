@@ -68,7 +68,7 @@ scene.onBeforeRenderObservable.add(() => {
   if (aim.active) {
     const sc = shrinkScale(t - aim.start);
     $('aimShrink').style.transform = `translate(-50%, -50%) scale(${sc})`;
-    const good = Math.abs(sc - 1) < 0.15;
+    const good = Math.abs(sc - 1) < 0.15 * aim.win;   // 테두리를 노리면 초록 구간도 좁아진다
     $('aimShrink').style.borderColor = good ? '#7CFF8A' : '';
   }
 });
