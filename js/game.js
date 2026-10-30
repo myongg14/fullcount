@@ -29,7 +29,8 @@ const G = {
 const battingSide = () => (G.top ? 'away' : 'home');
 const fieldingSide = () => (G.top ? 'home' : 'away');
 const isMine = side => (side === 'home') === G.myHome;
-const team = side => TEAMS[isMine(side) ? GAME_SETTINGS.myTeam : 1 - GAME_SETTINGS.myTeam];
+const teamIndex = side => (isMine(side) ? GAME_SETTINGS.myTeam : 1 - GAME_SETTINGS.myTeam);
+const team = side => TEAMS[teamIndex(side)];
 const teamName = side => team(side).name;
 const currentBatter = () => team(battingSide()).batters[G.order[battingSide()]];
 const currentPitcher = () => team(fieldingSide()).pitchers[G.pitcher[fieldingSide()]];
@@ -79,7 +80,7 @@ const bullpenOptions = () => team(fieldingSide()).pitchers
 const changePitcher = i => {
   const side = fieldingSide();
   G.pitcher[side] = i; G.usedPitchers[side].push(i);
-  setPitcherHand(currentPitcher().throws);
+  setPitcherHand(currentPitcher().throws); dressPlayers();
   renderPitchCards(); renderBoard();
   banner('투수 교체', `${currentPitcher().name} · ${currentPitcher().throws === 'L' ? '좌투' : '우투'}`, 1300);
 };
@@ -94,6 +95,7 @@ const preparePA = () => {
   cpuBullpenCheck();
   setBatterSide(currentBatter().bats);
   setPitcherHand(currentPitcher().throws);
+  dressPlayers();
   renderPitchCards(); renderBoard();
 };
 
