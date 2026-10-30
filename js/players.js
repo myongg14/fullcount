@@ -1,4 +1,4 @@
-// 선수 모델: 투수(팔), 타자, 배트
+// 선수 모델: 투수(팔), 타자, 배트, 포수와 미트. 좌/우에 맞게 서는 위치 바꾸기
 
 // 카툰 선수: 몸통 캡슐 + 머리 + 모자
 const makePlayer = (shirt, cap) => {
@@ -18,7 +18,7 @@ pitcher.position.set(0, 0.24, MOUND_Z); pitcher.rotation.y = Math.PI;
 const pitchArm = BABYLON.MeshBuilder.CreateCapsule('arm', { radius: 0.08, height: 0.7 }, scene);
 pitchArm.material = mat('#e9eef2'); pitchArm.parent = pitcher;
 pitchArm.setPivotPoint(new BABYLON.Vector3(0, 0.3, 0));
-pitchArm.position.set(-0.38, 1.05, 0);
+pitchArm.position.set(0.38, 1.05, 0);
 
 const batter = makePlayer('#b8222c', '#b8222c');
 batter.position.set(-0.95, 0, 0.1); batter.rotation.y = Math.PI / 2;
@@ -29,3 +29,27 @@ const bat = BABYLON.MeshBuilder.CreateCylinder('bat', { diameterTop: 0.07, diame
 bat.material = mat('#d9a066'); bat.parent = batPivot; bat.position.set(0, 0.43, 0);
 const BAT_REST = new BABYLON.Vector3(0.0, 0, -0.6);
 batPivot.rotation.copyFrom(BAT_REST);
+
+// 포수(쪼그려 앉은 자세라 몸을 땅에 조금 묻음)와 미트. 투구 모드에서만 보인다.
+const catcher = makePlayer('#2b3c55', '#2b3c55');
+catcher.position.set(0, -0.72, -0.95); catcher.scaling.setAll(0.9);
+const mitt = BABYLON.MeshBuilder.CreateSphere('mitt', { diameter: 0.26, segments: 12 }, scene);
+mitt.scaling.z = 0.5; mitt.material = mat('#7a4520');
+const MITT_REST = new BABYLON.Vector3(0, 0.75, -0.45);
+mitt.position.copyFrom(MITT_REST);
+catcher.setEnabled(false); mitt.setEnabled(false);
+
+// 왼손/오른손에 맞게 서는 쪽 바꾸기. batSide: 우타 1, 좌타 -1 (좌타는 좌우를 거울처럼 뒤집음)
+let batSide = 1;
+const setBatterSide = bats => {
+  batSide = bats === 'L' ? -1 : 1;
+  batter.position.x = -0.95 * batSide; batter.rotation.y = batSide * Math.PI / 2;
+  batPivot.position.x = -0.62 * batSide;
+  batPivot.rotation.set(BAT_REST.x, BAT_REST.y * batSide, BAT_REST.z * batSide);
+};
+// 던지는 팔: 우투는 투수의 오른쪽(포수가 볼 때 왼쪽), 좌투는 반대
+let pitchHand = 1;
+const setPitcherHand = throws => {
+  pitchHand = throws === 'L' ? -1 : 1;
+  pitchArm.position.x = 0.38 * pitchHand;
+};

@@ -82,13 +82,31 @@ button:focus-visible { outline: 3px solid var(--bulb); outline-offset: 2px; }
 }
 .dock > * { pointer-events: auto; }
 .card {
-  width: 92px; min-height: 64px; padding: 8px 6px; border-radius: 10px; cursor: pointer;
+  min-width: 92px; min-height: 64px; padding: 8px 10px; white-space: nowrap; border-radius: 10px; cursor: pointer;
   background: var(--board); color: var(--chalk); border: 2px solid var(--board-edge);
   font-family: var(--font-display); font-size: 19px; display: grid; gap: 2px; justify-items: center;
 }
 .card small { font-family: var(--font-body); font-size: 11px; opacity: .75; }
 .card[aria-pressed="true"] { border-color: var(--bulb); box-shadow: 0 0 0 2px var(--bulb) inset; }
 .chip { background: var(--board); border: 2px solid var(--board-edge); }
+.cards { display: contents; }
+/* 투수 교체 창 */
+.sheet {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 8;
+  width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
+  padding: 16px; display: grid; gap: 10px;
+  background: var(--board); border: 2px solid var(--board-edge); border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+}
+.sheet h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 26px; }
+.sheet p { margin: 0; font-size: 15px; opacity: .85; }
+#bullpenList { display: grid; gap: 8px; }
+.pick {
+  text-align: left; min-height: 56px; padding: 10px 14px; border-radius: 10px; cursor: pointer;
+  background: var(--ink); color: var(--chalk); border: 2px solid var(--board-edge);
+  font-family: var(--font-display); font-size: 20px;
+}
+.pick small { font-family: var(--font-body); font-size: 13px; opacity: .8; line-height: 1.5; }
 .chip[aria-pressed="true"] { border-color: var(--bulb-red); color: var(--bulb-red); }
 
 /* 안내·결과 */
@@ -119,7 +137,7 @@ button:focus-visible { outline: 3px solid var(--bulb); outline-offset: 2px; }
 #tapMark { width: 40px; height: 40px; border: 3px solid var(--bulb); opacity: 0; transition: opacity .3s; }
 .loading { position: fixed; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: 28px; z-index: 9; background: var(--ink); }
 @media (max-width: 560px) {
-  .card { width: 72px; font-size: 16px; }
+  .card { min-width: 72px; font-size: 16px; padding: 6px 6px; }
   .count { font-size: 16px; gap: 10px; padding: 6px 10px; }
   .score { font-size: 15px; gap: 8px; padding: 5px 8px; }
   .score .inning { font-size: 16px; }

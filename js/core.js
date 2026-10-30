@@ -10,7 +10,7 @@ const S = {
   mode: 'bat',        // bat(내가 타격) | pitch(내가 투구): 공수에 따라 game.js가 정한다
   phase: 'idle',      // idle | windup | pitch | flight | result
   pitch: null, swing: null, power: false, rookie: true,
-  selPitch: 'fast',
+  selPitch: 'four',   // 고른 구종(data/pitches.js의 키)
 };
 
 const $ = id => document.getElementById(id);
