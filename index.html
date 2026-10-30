@@ -67,6 +67,9 @@
       <div class="seg" id="pickTime"><button>낮 경기</button><button>밤 경기</button></div></div>
     <div class="field"><span class="label">난이도</span>
       <div class="seg" id="pickLevel"><button>루키 (공이 느리게)</button><button>프로 (실제 속도)</button></div></div>
+    <div class="field"><span class="label">소리</span>
+      <div class="sound-row"><div class="seg" id="menuSound"><button>켜기</button><button>끄기</button></div>
+        <input type="range" class="volume" id="menuVolume" min="0" max="100" aria-label="음량"></div></div>
     <button class="big-btn" id="startBtn">경기 시작</button>
   </div>
 </div>
@@ -75,6 +78,9 @@
 <div class="overlay" id="pause" hidden>
   <div class="panel small-panel">
     <h2>일시정지</h2>
+    <div class="field"><span class="label">소리</span>
+      <div class="seg" id="pauseSound"><button>켜기</button><button>끄기</button></div>
+      <input type="range" class="volume" id="pauseVolume" min="0" max="100" aria-label="음량"></div>
     <button class="big-btn" id="resumeBtn">이어하기</button>
     <button class="big-btn ghost" id="toMenuBtn">처음으로</button>
   </div>
@@ -115,6 +121,7 @@
 <script src="js/batting.js"></script>
 <script src="js/play.js"></script>
 <script src="js/game.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/screens.js"></script>
 <script src="js/main.js"></script>
 </body>

@@ -10,9 +10,10 @@ const saveSettings = s => {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* 저장 못 해도 괜찮다 */ }
 };
 const menuState = {
-  team: 0, home: false, innings: 3, night: GAME_SETTINGS.night, rookie: true,
+  team: 0, home: false, innings: 3, night: GAME_SETTINGS.night, rookie: true, sound: true, volume: 0.8,
   ...loadSettings(),
 };
+setSound(menuState.sound, menuState.volume);
 // 주소 끝에 ?night 를 붙여 열면 기억한 값보다 우선
 if (/[?&]night\b/.test(location.search)) menuState.night = true;
 
@@ -33,6 +34,22 @@ const renderMenu = () => {
   seg('pickInnings', 'innings', [3, 9]);
   seg('pickTime', 'night', [false, true]);
   seg('pickLevel', 'rookie', [true, false]);
+  renderSoundControls();
+};
+// 소리 켜기/끄기와 음량: 메뉴와 일시정지 화면에 같은 조절기가 있다
+const renderSoundControls = () => {
+  ['menuSound', 'pauseSound'].forEach(id => {
+    $(id).querySelectorAll('button').forEach((b, i) => {
+      b.setAttribute('aria-pressed', menuState.sound === (i === 0));
+      b.onclick = () => { menuState.sound = i === 0; setSound(menuState.sound, menuState.volume); saveSettings(menuState); renderSoundControls(); };
+    });
+  });
+  ['menuVolume', 'pauseVolume'].forEach(id => {
+    const r = $(id);
+    r.value = Math.round(menuState.volume * 100); r.disabled = !menuState.sound;
+    r.oninput = () => { menuState.volume = r.value / 100; setSound(menuState.sound, menuState.volume); renderSoundControls(); };
+    r.onchange = () => saveSettings(menuState);
+  });
 };
 // 하던 경기를 멈추고 정리한다(날아가던 공, 플레이, 버튼)
 const abortGame = () => {
@@ -53,6 +70,7 @@ const showMenu = () => {
 };
 const startGame = () => {
   saveSettings(menuState);
+  initAudio();   // iPad: 버튼을 누르는 이 순간에 소리를 켠다
   GAME_SETTINGS.myTeam = menuState.team;
   GAME_SETTINGS.myHome = menuState.home;
   GAME_SETTINGS.night = menuState.night;
@@ -69,10 +87,11 @@ const startGame = () => {
 const openPause = () => {
   if (!$('menu').hidden || !$('result').hidden || isPaused()) return;
   if (aim.active) releaseAimCancel();
-  pauseClock(true);
+  pauseClock(true); pauseAudio(true);
+  renderSoundControls();
   $('pause').hidden = false;
 };
-const closePause = () => { $('pause').hidden = true; pauseClock(false); };
+const closePause = () => { $('pause').hidden = true; pauseClock(false); pauseAudio(false); };
 // 조준 중에 일시정지하면 던지지 않고 조준만 취소
 const releaseAimCancel = () => { aim.active = false; $('aimTarget').hidden = true; $('aimShrink').hidden = true; };
 
