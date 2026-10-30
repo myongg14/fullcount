@@ -124,6 +124,7 @@ const resolveSwing = () => {
 // ---------- 타구 비행 ----------
 const launchFlight = (res, sub) => {
   recordBatted(res);
+  sfxBat(clamp(((res.ev || 120) - 90) / 80, 0, 1), res.kind === 'foul');   // 타구가 셀수록 맑은 '딱'
   S.phase = 'flight';
   flight = { res, sub, t0: now(), pts: res.fl.pts };
   ball.position.copyFrom(res.fl.pts[0]);

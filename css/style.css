@@ -204,10 +204,15 @@ button:focus-visible { outline: 3px solid var(--bulb); outline-offset: 2px; }
 .records b { font-family: var(--font-display); font-weight: 400; font-size: 30px; color: var(--bulb); }
 .records small { font-size: 13px; opacity: .85; }
 .result-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+/* 소리 조절 */
+.sound-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
+.volume { width: 100%; min-height: 48px; accent-color: var(--bulb); touch-action: manipulation; }
+.volume:disabled { opacity: .4; }
+.small-panel .field { text-align: left; }
 /* 메뉴가 떠 있으면 경기 화면 요소를 숨긴다 */
 body.in-menu .board, body.in-menu .dock, body.in-menu .hint { display: none; }
 @media (max-width: 560px) {
   .seg { grid-auto-flow: row; }
-  .team-pick, .records, .result-btns { grid-template-columns: 1fr; }
+  .team-pick, .records, .result-btns, .sound-row { grid-template-columns: 1fr; }
   .tbl { font-size: 14px; }
 }

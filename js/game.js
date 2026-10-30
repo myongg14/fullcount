@@ -197,6 +197,11 @@ const endPA = (kind, text, sub, info = {}) => {
   if (kind === 'hr') bx.hr++;
   if (kind === 'k') bx.k++;
   if (kind === 'hit' || kind === 'hr') crowdCheer(kind === 'hr' ? 2 : 1);
+  // 소리: 심판 콜과 관중 함성(audio.js)
+  if (kind === 'k') { umpireCall('스트라이크 아웃!'); sfxCheer(1); }
+  if (kind === 'out') umpireCall('아웃!');
+  if (kind === 'hit') { umpireCall('세이프!'); sfxCheer(2); }
+  if (kind === 'hr') sfxCheer(3);
   // 투수 기록(지금 던지는 투수)
   const fs = fieldingSide(), pi = G.pitcher[fs];
   const ps = G.pstats[fs][pi] || (G.pstats[fs][pi] = { outs: 0, h: 0, r: 0, k: 0 });
@@ -230,11 +235,13 @@ const callPitch = (res, sub) => {
   // res: 'ball' | 'strike' | 'foul'
   if (res === 'ball') {
     G.balls++;
+    umpireCall('볼!');
     if (G.balls >= 4) return startPlay({ kind: 'bb' }, sub);   // 주자가 걸어가는 짧은 플레이 뒤에 결과
     banner('볼', sub, 900);
   } else if (res === 'strike') {
     G.strikes++;
     if (G.strikes >= 3) return endPA('k', '삼진', sub);
+    umpireCall('스트라이크!');
     banner('스트라이크', sub, 900);
   } else if (res === 'foul') {
     if (G.strikes < 2) G.strikes++;
