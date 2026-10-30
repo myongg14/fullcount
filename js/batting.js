@@ -1,5 +1,20 @@
 // 타격·타구: 타구 비행 계산과 결과 판정, 내 스윙 판정, 타구 날아가는 동안의 처리
 
+// ---------- 타격 설정 (숫자만 바꿔서 조절) ----------
+const BAT_TUNING = {
+  rookieTimeWin: 220,   // 루키: 공이 도착하는 순간 앞뒤로 이만큼(밀리초) 안에 탭하면 맞음 (v0.1은 170)
+  proTimeWin: 120,      // 프로: 같은 값
+  rookiePosWin: 0.26,   // 루키: 탭한 곳이 공에서 이 거리(m) 안이면 맞음 (v0.1은 0.20)
+  proPosWin: 0.15,      // 프로: 같은 값
+  powerTimeMul: 0.7,    // 파워 스윙이면 시간 폭에 곱함(더 좁아짐)
+  powerPosMul: 0.75,    // 파워 스윙이면 위치 폭에 곱함
+  // 존 끝 공: 존 가운데에서 멀수록(바깥쪽 절반부터) 타구가 약해지고 빗맞음·파울이 늘어난다
+  centerZone: 0.35,     // 가운데에서 이 안쪽(존 크기 비율)이면 '가운데 공'
+  centerEvBonus: 8,     // 가운데 공을 맞히면 타구 속도 +(km/h)
+  edgeEvLoss: 22,       // 테두리 공을 맞히면 타구 속도 -(km/h)
+  edgeMishit: 0.45,     // 테두리 공을 맞혔을 때 파울이나 빗맞은 타구가 될 확률
+};
+
 // ---------- 타구 결과 ----------
 // ev: 타구 속도(km/h), la: 발사각(도), dir: 좌우 각도(도, 음수=3루 쪽)
 const simFlight = (ev, la, dir) => {
@@ -62,8 +77,9 @@ const resolveSwing = () => {
   const pc = S.pitch, sw = S.swing;
   const arrive = pc.t0 + pc.dur * 1000;
   const dt = sw.t - arrive;                 // + 늦음, - 빠름
-  const win = (S.rookie ? 170 : 120) * (S.power ? 0.7 : 1);
-  const posWin = (S.rookie ? 0.2 : 0.15) * (S.power ? 0.75 : 1);
+  const T = BAT_TUNING;
+  const win = (S.rookie ? T.rookieTimeWin : T.proTimeWin) * (S.power ? T.powerTimeMul : 1);
+  const posWin = (S.rookie ? T.rookiePosWin : T.proPosWin) * (S.power ? T.powerPosMul : 1);
   const actual = pc.target;
   const sub = `${pc.name} ${pc.kmh}km/h`;
   if (!sw.pt || Math.abs(dt) > win) return callPitch('strike', sub + (dt < 0 ? ' · 너무 빨랐어요' : ' · 너무 늦었어요'));
@@ -77,6 +93,14 @@ const resolveSwing = () => {
   let la = clamp(14 - dy / posWin * 38 + rand(-5, 5), -20, 70);
   let dir = clamp(-dt / win * 55 + rand(-6, 6), -70, 70);
   if (q < 0.25 && Math.random() < 0.6) dir = (Math.random() < 0.5 ? -1 : 1) * rand(48, 80);
+  // 존 끝 공은 맞혀도 약하고 빗맞기 쉽다. 가운데 공은 잘 맞는다
+  const e = zoneEdge(actual), k = edgeHardK(e);
+  if (e <= T.centerZone) ev += T.centerEvBonus;
+  ev -= T.edgeEvLoss * k;
+  if (Math.random() < T.edgeMishit * k) {
+    if (Math.random() < 0.55) dir = (Math.random() < 0.5 ? -1 : 1) * rand(48, 80);   // 파울
+    else { ev *= 0.7; la = Math.random() < 0.5 ? rand(-25, -8) : rand(55, 75); }      // 빗맞은 땅볼·뜬공
+  }
   const res = judgeBatted(ev, la, dir);
   const timing = Math.abs(dt) < win * 0.25 ? '정타 타이밍' : dt < 0 ? '조금 빠름' : '조금 늦음';
   launchFlight(res, `${Math.round(ev)}km/h · ${Math.round(la)}° · ${timing}`);

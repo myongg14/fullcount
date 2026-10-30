@@ -21,3 +21,9 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const inZone = p => Math.abs(p.x) <= ZONE.x + 0.037 && p.y >= ZONE.yLo - 0.037 && p.y <= ZONE.yHi + 0.037;
 const now = () => performance.now();
+// 존 가운데에서 얼마나 멀리 있는지: 0 = 한가운데, 1 = 테두리, 1보다 크면 존 밖
+const zoneEdge = p => Math.max(Math.abs(p.x) / ZONE.x, Math.abs(p.y - (ZONE.yLo + ZONE.yHi) / 2) / ((ZONE.yHi - ZONE.yLo) / 2));
+// 치기 어려움(0~1): 존의 바깥쪽 절반부터 커져서 테두리와 존 밖에서 1
+const edgeHardK = e => clamp((e - 0.5) / 0.5, 0, 1);
+// 던지기 어려움(0~1): 테두리 근처에서 가장 크고, 존에서 멀리 벗어난 공(일부러 빼는 공)은 다시 줄어든다
+const borderK = e => (e <= 1 ? edgeHardK(e) : clamp(1 - (e - 1) / 0.6, 0, 1));
