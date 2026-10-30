@@ -83,7 +83,7 @@ hitPlane.position.set(0, 1, 0); hitPlane.rotation.y = Math.PI; hitPlane.visibili
 // ---------- 공 (눈으로 따라가기 쉽게) ----------
 const BALL_VIEW = {
   size: 0.11,          // 공 지름(m). 실제 공(약 0.074m)의 1.5배쯤
-  halo: true,          // 공 둘레에 얇게 빛나는 테두리
+  halo: false,         // 공 둘레에 얇게 빛나는 테두리(너무 반짝여서 끔)
   trail: true,         // 공 뒤 짧은 꼬리
   trailLength: 12,     // 꼬리 길이(프레임 수, 1초 60프레임 기준)
   trailWidth: 0.045,   // 꼬리 굵기(m)
@@ -99,7 +99,7 @@ const TRAIL_COLORS = {
   knuckle: '#ffb36b', eephus: '#ff9fd0',
 };
 const ball = BABYLON.MeshBuilder.CreateSphere('ball', { diameter: BALL_VIEW.size, segments: 12 }, scene);
-ball.material = mat('#ffffff', { emissive: '#bbbbbb' }); ball.isVisible = false;
+ball.material = mat('#f4f1ea', { emissive: '#555555' });   // 조명을 받는 흰 공(너무 반짝이지 않게) ball.isVisible = false;
 const ballHalo = BABYLON.MeshBuilder.CreateSphere('ballHalo', { diameter: BALL_VIEW.size * 1.45, segments: 10 }, scene);
 {
   const hm = new BABYLON.StandardMaterial('haloMat', scene);
