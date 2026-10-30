@@ -3,7 +3,7 @@
 // ---------- 매 프레임 ----------
 let swingAnim = 0;
 // 카메라: 타격은 포수 뒤, 투구는 투수 뒤 어깨 높이(글러브 쪽)에서 존을 확대해서 본다. 숫자를 바꿔 조절
-const PITCH_VIEW = { fov: 0.13, back: 2.5, side: 0.6, height: 1.8 };
+const PITCH_VIEW = { fov: 0.13, back: 2.5, side: 0.9, height: 1.8 };
 const camHome = { pos: new BABYLON.Vector3(0, 1.35, -4.6), tgt: new BABYLON.Vector3(0, 0.5, MOUND_Z), fov: 0.55 };
 const pitchView = () => ({
   pos: new BABYLON.Vector3(PITCH_VIEW.side * pitchHand, PITCH_VIEW.height, MOUND_Z + PITCH_VIEW.back),
@@ -16,8 +16,8 @@ scene.onBeforeRenderObservable.add(() => {
   // 와인드업: 팔 돌리기 0.7초
   if (S.phase === 'windup') {
     const u = (t - windT) / 700;
-    pitchArm.rotation.x = -u * Math.PI * 1.6;
-    if (u >= 1) { pitchArm.rotation.x = 0.3; const cb = windCb; windCb = null; cb && cb(); }
+    if (pitchArm) pitchArm.rotation.x = -u * Math.PI * 1.6;
+    if (u >= 1) { if (pitchArm) pitchArm.rotation.x = 0.3; const cb = windCb; windCb = null; cb && cb(); }
   }
   // 스윙 애니메이션 0.18초
   const su = (t - swingAnim) / 180;
