@@ -78,6 +78,17 @@ const zoneLines = BABYLON.MeshBuilder.CreateLines('zone', { points: [
   new BABYLON.Vector3(ZONE.x, ZONE.yHi, 0), new BABYLON.Vector3(-ZONE.x, ZONE.yHi, 0),
   new BABYLON.Vector3(-ZONE.x, ZONE.yLo, 0)] }, scene);
 zoneLines.color = new BABYLON.Color3(1, 1, 1); zoneLines.alpha = 0.55;
+// 투수 시점용 존 틀: 멀리서 봐도 보이게 굵게, 포수·타자보다 항상 앞에 그린다(renderingGroupId 1)
+const zoneFrame = new BABYLON.TransformNode('zoneFrame', scene);
+{
+  const T = 0.016, w = ZONE.x * 2, h = ZONE.yHi - ZONE.yLo, cy = (ZONE.yLo + ZONE.yHi) / 2;
+  const fm = mat('#ffffff', { emissive: '#ffffff' }); fm.disableLighting = true; fm.alpha = 0.9;
+  [[0, ZONE.yLo, w + T, T], [0, ZONE.yHi, w + T, T], [-ZONE.x, cy, T, h], [ZONE.x, cy, T, h]].forEach(([x, y, bw, bh], i) => {
+    const b = BABYLON.MeshBuilder.CreateBox('zf' + i, { width: bw, height: bh, depth: 0.005 }, scene);
+    b.position.set(x, y, 0); b.material = fm; b.renderingGroupId = 1; b.isPickable = false; b.parent = zoneFrame;
+  });
+}
+zoneFrame.setEnabled(false);
 // 탭 판정용 보이지 않는 판(홈플레이트 위 세로면)
 const hitPlane = BABYLON.MeshBuilder.CreatePlane('hp', { width: 6, height: 4 }, scene);
 hitPlane.position.set(0, 1, 0); hitPlane.rotation.y = Math.PI; hitPlane.visibility = 0; hitPlane.isPickable = true;

@@ -30,11 +30,14 @@ bat.material = mat('#d9a066'); bat.parent = batPivot; bat.position.set(0, 0.43, 
 const BAT_REST = new BABYLON.Vector3(0.0, 0, -0.6);
 batPivot.rotation.copyFrom(BAT_REST);
 
-// 포수(쪼그려 앉은 자세라 몸을 땅에 조금 묻음)와 미트. 투구 모드에서만 보인다.
+// 포수와 미트. 투구 모드(투수 시점)에서만 보인다.
+// 투수 눈높이에서는 포수가 존 뒤에 겹쳐 보이므로, 낮게 쪼그려 앉히고(몸을 땅에 묻음) 반투명하게 한다. 숫자를 바꿔 조절
+const CATCHER_VIEW = { y: -0.9, scale: 0.85, alpha: 0.35, mittAlpha: 0.6 };
 const catcher = makePlayer('#2b3c55', '#2b3c55');
-catcher.position.set(0, -0.72, -0.95); catcher.scaling.setAll(0.9);
+catcher.position.set(0, CATCHER_VIEW.y, -0.95); catcher.scaling.setAll(CATCHER_VIEW.scale);
+catcher.getChildMeshes().forEach(m => { m.material.alpha = CATCHER_VIEW.alpha; m.isPickable = false; });
 const mitt = BABYLON.MeshBuilder.CreateSphere('mitt', { diameter: 0.26, segments: 12 }, scene);
-mitt.scaling.z = 0.5; mitt.material = mat('#7a4520');
+mitt.scaling.z = 0.5; mitt.material = mat('#7a4520', { alpha: CATCHER_VIEW.mittAlpha }); mitt.isPickable = false;
 const MITT_REST = new BABYLON.Vector3(0, 0.75, -0.45);
 mitt.position.copyFrom(MITT_REST);
 catcher.setEnabled(false); mitt.setEnabled(false);
