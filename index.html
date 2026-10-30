@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>풀카운트 v0.1</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +21,8 @@
   --font-body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   color-scheme: dark;
 }
-html, body { height: 100%; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
 body {
   background: var(--ink); color: var(--chalk); font-family: var(--font-body);
   overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
@@ -108,6 +114,8 @@ button:focus-visible { outline: 3px solid var(--bulb); outline-offset: 2px; }
 }
 @media (prefers-reduced-motion: reduce) { .banner { transition: none; } }
 </style>
+</head>
+<body>
 
 <div id="stage"><canvas id="game" aria-label="야구장"></canvas></div>
 
@@ -642,3 +650,5 @@ button:focus-visible { outline: 3px solid var(--bulb); outline-offset: 2px; }
   });
 })();
 </script>
+</body>
+</html>
