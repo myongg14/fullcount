@@ -170,7 +170,9 @@ const endPA = (kind, text, sub, info = {}) => {
   let scored = 0;
   if (kind === 'k') G.outs++;
   if (kind === 'out') {
-    if (info.groundOut && G.bases[0] && G.outs < 2 && Math.random() < GAME_SETTINGS.doublePlayChance) {
+    // 병살 여부는 플레이를 보여 주기 전에 play.js가 미리 정해서 넘겨준다(info.dp)
+    const dp = info.dp ?? (info.groundOut && G.bases[0] && G.outs < 2 && Math.random() < GAME_SETTINGS.doublePlayChance);
+    if (dp) {
       G.outs += 2; G.bases[0] = false; text = '병살';
     } else G.outs++;
   }
@@ -222,7 +224,7 @@ const callPitch = (res, sub) => {
   // res: 'ball' | 'strike' | 'foul'
   if (res === 'ball') {
     G.balls++;
-    if (G.balls >= 4) return endPA('bb', '볼넷', sub);
+    if (G.balls >= 4) return startPlay({ kind: 'bb' }, sub);   // 주자가 걸어가는 짧은 플레이 뒤에 결과
     banner('볼', sub, 900);
   } else if (res === 'strike') {
     G.strikes++;

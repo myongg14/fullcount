@@ -90,6 +90,8 @@ button:focus-visible { outline: 3px solid var(--bulb); outline-offset: 2px; }
 .card[aria-pressed="true"] { border-color: var(--bulb); box-shadow: 0 0 0 2px var(--bulb) inset; }
 .chip { background: var(--board); border: 2px solid var(--board-edge); }
 .cards { display: contents; }
+/* 홈런 빨리 감기 */
+.ff { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 6; min-height: 48px; }
 /* 투수 교체 창 */
 .sheet {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 8;

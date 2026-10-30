@@ -129,6 +129,8 @@ const launchFlight = (res, sub) => {
   startTrail('hit');
   // 떨어질 지점을 미리 보여 준다
   landMark.position.set(res.fl.land.x, 0.04, res.fl.land.z); landMark.isVisible = true;
+  // 파울이 아니면 수비·주루 플레이로(play.js). 결과는 이미 정해져 있다
+  if (res.kind !== 'foul') { flight = null; startPlay(res, sub); }
 };
 const finishFlight = () => {
   const { res, sub } = flight; flight = null;
