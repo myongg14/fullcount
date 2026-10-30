@@ -69,8 +69,7 @@ window.addEventListener('pointercancel', () => releaseAim());
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 
-$('modeBat').onclick = () => setMode('bat');
-$('modePitch').onclick = () => setMode('pitch');
+document.querySelectorAll('#newGame button').forEach(b => b.onclick = () => newGame(Number(b.dataset.innings)));
 $('nextBtn').onclick = nextPA;
 $('powerBtn').onclick = () => { S.power = !S.power; $('powerBtn').setAttribute('aria-pressed', S.power); };
 $('slowBtn').onclick = () => {
@@ -85,6 +84,6 @@ document.querySelectorAll('.card').forEach(c => c.onclick = () => {
 window.addEventListener('resize', () => engine.resize());
 engine.runRenderLoop(() => scene.render());
 scene.executeWhenReady(() => {
-  $('loading').hidden = true; renderBoard();
-  setTimeout(startAIPitch, 1000);
+  $('loading').hidden = true;
+  newGame();
 });

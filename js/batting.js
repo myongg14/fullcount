@@ -16,7 +16,16 @@ const simFlight = (ev, la, dir) => {
   const dist = Math.hypot(land.x, land.z);
   return { pts, dist, hang: t, land };
 };
+// 3루타: 외야 깊은 곳(이 거리 이상)에 떨어진 안타 중 일부
+const TRIPLE_DIST = 90, TRIPLE_CHANCE = 0.3;
 const judgeBatted = (ev, la, dir) => {
+  const res = judgeBattedBase(ev, la, dir);
+  if (res.kind === 'hit' && res.fl.dist >= TRIPLE_DIST && Math.random() < TRIPLE_CHANCE) {
+    return { ...res, label: '3루타', bases: 3 };
+  }
+  return res;
+};
+const judgeBattedBase = (ev, la, dir) => {
   const fl = simFlight(ev, la, dir);
   if (Math.abs(dir) > 45) return { kind: 'foul', fl };
   // 펜스를 넘을 때의 높이로 홈런 판정
@@ -25,7 +34,7 @@ const judgeBatted = (ev, la, dir) => {
   if (la > 50) return { kind: 'out', label: '내야 뜬공', fl };
   if (la < 8) {
     const p = ev > 150 ? 0.45 : ev > 125 ? 0.25 : 0.1;
-    return Math.random() < p ? { kind: 'hit', label: '땅볼 안타', bases: 1, fl } : { kind: 'out', label: '땅볼 아웃', fl };
+    return Math.random() < p ? { kind: 'hit', label: '땅볼 안타', bases: 1, fl } : { kind: 'out', label: '땅볼 아웃', groundOut: true, fl };
   }
   if (la < 25) {
     const p = ev > 140 ? 0.75 : ev > 115 ? 0.55 : 0.3;
@@ -85,6 +94,6 @@ const finishFlight = () => {
   const d = Math.round(res.fl.dist);
   if (res.kind === 'foul') return callPitch('foul', sub);
   if (res.kind === 'hr') return endPA('hr', '홈런!', `${d}m · ${sub}`);
-  if (res.kind === 'hit') return endPA('hit', res.label, `${d}m · ${sub}`);
-  return endPA('out', res.label, `${d}m · ${sub}`);
+  if (res.kind === 'hit') return endPA('hit', res.label, `${d}m · ${sub}`, { bases: res.bases });
+  return endPA('out', res.label, `${d}m · ${sub}`, { groundOut: res.groundOut });
 };
