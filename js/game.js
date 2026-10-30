@@ -105,6 +105,7 @@ const applyMode = () => {
   $('batDock').hidden = m !== 'bat'; $('pitchDock').hidden = m !== 'pitch';
   batter.getChildMeshes().forEach(x => { x.material.alpha = m === 'bat' ? 0.55 : 1; });
   catcher.setEnabled(m === 'pitch'); mitt.setEnabled(m === 'pitch');
+  zoneFrame.setEnabled(m === 'pitch'); zoneLines.setEnabled(m === 'bat');
 };
 const startHalf = () => {
   const side = battingSide();
