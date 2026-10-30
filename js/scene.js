@@ -3,7 +3,12 @@
 const canvas = $('game');
 
 // ---------- 장면 ----------
+// 화질과 속도: iPad는 화면 배율이 2배라 그대로 그리면 픽셀이 4배가 되어 프레임이 끊긴다. 숫자를 바꿔 조절
+const PERF = {
+  maxPixelRatio: 1.25,   // 그리는 해상도 배율 최대값. 낮출수록 빠르고 흐려짐(1 = 가장 빠름, 2 = iPad 원래 화질)
+};
 const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: true });
+engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, PERF.maxPixelRatio));
 const scene = new BABYLON.Scene(engine);
 scene.clearColor = BABYLON.Color4.FromHexString('#8fd0f2ff');
 scene.ambientColor = new BABYLON.Color3(0.4, 0.4, 0.4);
