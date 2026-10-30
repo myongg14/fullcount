@@ -116,12 +116,14 @@ const resolveSwing = () => {
     else { ev *= 0.7; la = Math.random() < 0.5 ? rand(-25, -8) : rand(55, 75); }      // 빗맞은 땅볼·뜬공
   }
   const res = judgeBatted(ev, la, dir);
+  res.ev = ev;
   const timing = Math.abs(dt) < win * 0.25 ? '정타 타이밍' : dt < 0 ? '조금 빠름' : '조금 늦음';
   launchFlight(res, `${Math.round(ev)}km/h · ${Math.round(la)}° · ${timing}`);
 };
 
 // ---------- 타구 비행 ----------
 const launchFlight = (res, sub) => {
+  recordBatted(res);
   S.phase = 'flight';
   flight = { res, sub, t0: now(), pts: res.fl.pts };
   ball.position.copyFrom(res.fl.pts[0]);

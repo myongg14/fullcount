@@ -30,6 +30,7 @@
     <div class="row s" aria-label="스트라이크">S <span class="bulb"></span><span class="bulb"></span></div>
     <div class="row o" aria-label="아웃">O <span class="bulb"></span><span class="bulb"></span></div>
   </div>
+  <button class="pause-btn" id="pauseBtn" aria-label="일시정지">❚❚</button>
 </div>
 
 <div class="dock" id="batDock">
@@ -51,9 +52,50 @@
 <div class="banner" id="banner"></div>
 <button class="next" id="nextBtn" hidden>다음 타석</button>
 <button class="chip ff" id="ffBtn" hidden>빨리 감기 ▶▶</button>
-<div class="new-game" id="newGame" hidden>
-  <button class="next" data-innings="3">새 경기 · 3이닝</button>
-  <button class="next" data-innings="9">새 경기 · 9이닝</button>
+
+<!-- 시작 메뉴 -->
+<div class="overlay" id="menu" hidden>
+  <div class="panel menu-panel">
+    <h1 class="title">풀카운트</h1>
+    <p class="tagline">타이밍과 손맛으로 치고 던지는 한 경기</p>
+    <div class="field"><span class="label">내 팀</span><div class="team-pick" id="teamPick"></div></div>
+    <div class="field"><span class="label">홈 / 원정</span>
+      <div class="seg" id="pickSide"><button>원정 (먼저 공격)</button><button>홈 (나중 공격)</button></div></div>
+    <div class="field"><span class="label">이닝</span>
+      <div class="seg" id="pickInnings"><button>3이닝</button><button>9이닝</button></div></div>
+    <div class="field"><span class="label">시간</span>
+      <div class="seg" id="pickTime"><button>낮 경기</button><button>밤 경기</button></div></div>
+    <div class="field"><span class="label">난이도</span>
+      <div class="seg" id="pickLevel"><button>루키 (공이 느리게)</button><button>프로 (실제 속도)</button></div></div>
+    <button class="big-btn" id="startBtn">경기 시작</button>
+  </div>
+</div>
+
+<!-- 일시정지 -->
+<div class="overlay" id="pause" hidden>
+  <div class="panel small-panel">
+    <h2>일시정지</h2>
+    <button class="big-btn" id="resumeBtn">이어하기</button>
+    <button class="big-btn ghost" id="toMenuBtn">처음으로</button>
+  </div>
+</div>
+
+<!-- 경기 결과 -->
+<div class="overlay scroll" id="result" hidden>
+  <div class="panel result-panel">
+    <h1 class="result-title" id="resultTitle">승리!</h1>
+    <p class="result-score" id="resultScore"></p>
+    <table class="tbl line" id="lineScore"></table>
+    <div class="records" id="records"></div>
+    <h3>내 타자 기록</h3>
+    <table class="tbl" id="myBatting"></table>
+    <h3>내 투수 기록</h3>
+    <table class="tbl" id="myPitching"></table>
+    <div class="result-btns">
+      <button class="big-btn" id="againBtn">다시 하기</button>
+      <button class="big-btn ghost" id="resultMenuBtn">메뉴로</button>
+    </div>
+  </div>
 </div>
 <div class="ring" id="aimTarget" hidden></div>
 <div class="ring" id="aimShrink" hidden></div>
@@ -73,6 +115,7 @@
 <script src="js/batting.js"></script>
 <script src="js/play.js"></script>
 <script src="js/game.js"></script>
+<script src="js/screens.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

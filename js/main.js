@@ -118,7 +118,6 @@ window.addEventListener('pointercancel', () => releaseAim());
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 
-document.querySelectorAll('#newGame button').forEach(b => b.onclick = () => newGame(Number(b.dataset.innings)));
 $('nextBtn').onclick = nextPA;
 $('ffBtn').onclick = () => { if (play) { play.speed = PLAY_TUNING.hrFast; $('ffBtn').hidden = true; } };
 $('powerBtn').onclick = () => { S.power = !S.power; $('powerBtn').setAttribute('aria-pressed', S.power); };
@@ -133,5 +132,5 @@ window.addEventListener('resize', () => engine.resize());
 engine.runRenderLoop(() => scene.render());
 scene.executeWhenReady(() => {
   $('loading').hidden = true;
-  newGame();
+  showMenu();
 });

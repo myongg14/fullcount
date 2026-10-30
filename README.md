@@ -15,13 +15,14 @@ iPad Safari에서 터치로 치고 던지는 카툰 3D 야구 게임. 혼자 만
 - `js/pitching.js`: 투구 궤적(구종·숙련도·좌우·체력 반영), 컴퓨터 투수, 내 투구 조준과 컴퓨터 타자. 맨 위 `PITCH_TUNING`(테두리 제구 어려움), `AI_BAT_TUNING`(컴퓨터 타자)에서 조절.
 - `js/batting.js`: 타구 계산과 판정, 내 스윙 판정. 맨 위 `BAT_TUNING`에서 타격 판정 폭과 존 끝 공의 어려움을 조절.
 - `js/play.js`: 수비와 주루. 타구가 나면 수비수가 공을 쫓아 잡고 던지고, 주자가 베이스를 돈다(홈런은 천천히, 빨리 감기 버튼). 결과는 판정 코드가 먼저 정하고 이 파일은 보여 주기만 한다. 한 플레이 최대 6초, 탭하면 건너뛰기. 맨 위 `PLAY_TUNING`에서 조절.
+- `js/screens.js`: 시작 메뉴(내 팀, 홈/원정, 3/9이닝, 낮/밤, 루키/프로 — 마지막 설정을 기억), 일시정지(이어하기/처음으로), 경기 결과(승패, 라인 스코어, 내 타자·투수 기록, 최장 홈런, 가장 빠른 타구).
 - `js/game.js`: 한 경기 규칙과 상태(이닝, 점수, 주자, 카운트, 타순, 공수 교대, 경기 종료). 맨 위 `GAME_SETTINGS`에서 이닝 수·홈/원정을 바꿀 수 있다.
 - `js/main.js`: 매 프레임 애니메이션, 카메라(투구 때 투수 뒤 시점, `PITCH_VIEW`로 조절), 입력 연결, 시작.
 - `prompts/v0.2-update-prompts.md`: v0.2(한 경기)를 만들기 위한 코드 작업용 단계별 프롬프트.
 
 ## iPad에서 열기
 
-주소 끝에 `?night`를 붙이면(예: `https://myongg14.github.io/fullcount/?night`) 밤 경기로 열린다. 기본값은 `js/game.js`의 `GAME_SETTINGS.night`.
+낮/밤, 이닝, 팀 등은 시작 메뉴에서 고른다. 주소 끝에 `?night`를 붙이면 메뉴에서 밤 경기가 미리 골라져 있다.
 
 
 저장소 Settings → Pages에서 Source를 `main` 브랜치 `/ (root)`로 정하면 `https://myongg14.github.io/fullcount/` 주소로 열 수 있다.

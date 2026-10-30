@@ -117,7 +117,7 @@ const windup = cb => { S.phase = 'windup'; windT = now(); windCb = cb; pitchThro
 // ---------- 투구 모드: 내가 던지고 AI가 친다 ----------
 const aim = { active: false, start: 0, x: 0, y: 0, cycle: 1.3, win: 1 };
 const readyPitch = () => {
-  if (S.mode !== 'pitch') return;
+  if (S.mode !== 'pitch' || S.phase === 'menu') return;
   S.phase = 'idle';
   hint('구종을 고르고, 존 위를 눌러 조준하세요. 노란 링이 흰 링과 겹칠 때 손을 떼면 정확히 들어가요.');
 };
@@ -181,5 +181,7 @@ const aiBatterDecide = () => {
   let dir = rand(-60, 60);
   if (Math.random() < A.edgeFoul * k) dir = (Math.random() < 0.5 ? -1 : 1) * rand(50, 75);   // 끝 공은 파울이 잦다
   swingAnim = now();
-  launchFlight(judgeBatted(ev, la, dir), `${Math.round(ev)}km/h · ${Math.round(la)}°`);
+  const res = judgeBatted(ev, la, dir);
+  res.ev = ev;
+  launchFlight(res, `${Math.round(ev)}km/h · ${Math.round(la)}°`);
 };

@@ -27,6 +27,8 @@ const G = {
   usedPitchers: { away: [0], home: [0] },// 이미 나온 투수(한 번 내려가면 다시 못 나옴)
   box: { away: [], home: [] },           // 타자별 이번 경기 기록(타순 순서)
   lastPitch: null,                       // 마지막 투구 { name, kmh }
+  pstats: { away: [], home: [] },        // 투수별 기록 { outs, h, r, k }
+  records: { hr: null, ev: null },       // 이번 경기 가장 긴 홈런, 가장 빠른 타구
   next: 'pa',                            // 결과 화면 뒤에 할 일: pa(다음 타석) | switch(공수 교대) | over(경기 끝) | final(새 경기 고르기)
 };
 
@@ -137,10 +139,11 @@ const newGame = (innings = GAME_SETTINGS.innings) => {
     line: { away: [], home: [] }, order: { away: 0, home: 0 }, next: 'pa',
     pitcher: { away: 0, home: 0 }, pitchCount: { away: [], home: [] }, usedPitchers: { away: [0], home: [0] },
     box: { away: newBox(), home: newBox() }, lastPitch: null,
+    pstats: { away: [], home: [] }, records: { hr: null, ev: null },
   });
   paintCrowd(team('home').colors, team('away').colors);
   applyTimeOfDay(GAME_SETTINGS.night);
-  $('nextBtn').hidden = true; $('newGame').hidden = true; $('banner').classList.remove('show');
+  $('nextBtn').hidden = true; $('result').hidden = true; $('banner').classList.remove('show');
   startHalf();
 };
 
@@ -164,9 +167,16 @@ const boxText = b => (b.pa === 0 ? '첫 타석' : `${b.ab}타수 ${b.h}안타` +
 
 // ---------- 진행 ----------
 const resetCount = () => { G.balls = 0; G.strikes = 0; };
-// kind: 'hit' | 'hr' | 'out' | 'k' | 'bb', info: { bases, groundOut }
+// 타구 기록: 가장 긴 홈런, 가장 빠른 타구(파울 제외)
+const recordBatted = res => {
+  const who = { name: currentBatter().name, team: teamName(battingSide()) };
+  if (res.kind === 'hr' && (!G.records.hr || res.fl.dist > G.records.hr.dist)) G.records.hr = { dist: Math.round(res.fl.dist), ...who };
+  if (res.kind !== 'foul' && res.ev && (!G.records.ev || res.ev > G.records.ev.kmh)) G.records.ev = { kmh: Math.round(res.ev), ...who };
+};
+// kind: 'hit' | 'hr' | 'out' | 'k' | 'bb', info: { bases, groundOut, dp }
 const endPA = (kind, text, sub, info = {}) => {
   const side = battingSide();
+  const outsBefore = G.outs;
   let scored = 0;
   if (kind === 'k') G.outs++;
   if (kind === 'out') {
@@ -179,7 +189,7 @@ const endPA = (kind, text, sub, info = {}) => {
   if (kind === 'bb') scored = walkRunners();
   if (kind === 'hit' || kind === 'hr') { G.hits[side]++; scored = advanceRunners(kind === 'hr' ? 4 : info.bases); }
   G.runs[side] += scored;
-  G.line[side][G.inning - 1] += scored;
+  G.line[side][G.inning - 1] = (G.line[side][G.inning - 1] || 0) + scored;
   const bx = batterBox();
   bx.pa++; bx.rbi += scored;
   if (kind !== 'bb') bx.ab++; else bx.bb++;
@@ -187,6 +197,12 @@ const endPA = (kind, text, sub, info = {}) => {
   if (kind === 'hr') bx.hr++;
   if (kind === 'k') bx.k++;
   if (kind === 'hit' || kind === 'hr') crowdCheer(kind === 'hr' ? 2 : 1);
+  // 투수 기록(지금 던지는 투수)
+  const fs = fieldingSide(), pi = G.pitcher[fs];
+  const ps = G.pstats[fs][pi] || (G.pstats[fs][pi] = { outs: 0, h: 0, r: 0, k: 0 });
+  ps.outs += G.outs - outsBefore; ps.r += scored;
+  if (kind === 'hit' || kind === 'hr') ps.h++;
+  if (kind === 'k') ps.k++;
   G.order[side] = (G.order[side] + 1) % 9;
   if (scored) sub = `${scored}점 득점 · ${sub}`;
   G.next = gameOverNow() ? 'over' : G.outs >= 3 ? 'switch' : 'pa';
@@ -194,24 +210,14 @@ const endPA = (kind, text, sub, info = {}) => {
   banner(text, sub, 0);
   S.phase = 'result';
   setTimeout(() => {
+    if (S.phase !== 'result') return;   // 그 사이 메뉴로 나갔으면 버튼을 띄우지 않는다
     $('nextBtn').textContent = { pa: '다음 타석', switch: '공수 교대', over: '경기 결과' }[G.next];
     $('nextBtn').hidden = false; $('nextBtn').focus({ preventScroll: true });
   }, 600);
 };
-const showFinal = () => {
-  const me = G.myHome ? 'home' : 'away', cpu = G.myHome ? 'away' : 'home';
-  const d = G.runs[me] - G.runs[cpu];
-  banner(d > 0 ? '승리!' : d < 0 ? '패배' : '무승부',
-    `${teamName(me)} ${G.runs[me]} : ${G.runs[cpu]} ${teamName(cpu)}`, 0);
-  hint('경기 끝. 몇 이닝으로 새 경기를 할지 고르세요.');
-  $('stats').textContent = '경기 끝';
-  $('batDock').hidden = true; $('pitchDock').hidden = true;
-  G.next = 'final';
-  $('newGame').hidden = false;
-};
 const nextPA = () => {
   $('nextBtn').hidden = true; $('banner').classList.remove('show');
-  if (G.next === 'over') return showFinal();
+  if (G.next === 'over') return showResult();
   if (G.next === 'switch') {
     if (G.top) G.top = false; else { G.top = true; G.inning++; }
     return startHalf();
