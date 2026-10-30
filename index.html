@@ -37,10 +37,14 @@
   <button class="chip" id="slowBtn" aria-pressed="true">루키(느리게)</button>
 </div>
 <div class="dock" id="pitchDock" hidden>
-  <button class="card" data-pitch="fast" aria-pressed="true">직구<small>빠르고 곧게</small></button>
-  <button class="card" data-pitch="slider" aria-pressed="false">슬라이더<small>옆으로 휨</small></button>
-  <button class="card" data-pitch="curve" aria-pressed="false">커브<small>크게 떨어짐</small></button>
-  <button class="card" data-pitch="change" aria-pressed="false">체인지업<small>느리게 떨어짐</small></button>
+  <div class="cards" id="pitchCards"></div>
+  <button class="chip" id="changeBtn">투수 교체</button>
+</div>
+<div class="sheet" id="bullpen" role="dialog" aria-label="투수 교체" hidden>
+  <h2>투수 교체</h2>
+  <p id="bullpenNow"></p>
+  <div id="bullpenList"></div>
+  <button class="chip" id="bullpenClose">취소</button>
 </div>
 
 <div class="hint" id="hint">공이 홈플레이트에 들어오는 순간, 공이 있는 곳을 탭하세요.</div>
@@ -58,6 +62,7 @@
 <script src="https://cdn.jsdelivr.net/npm/babylonjs@7.20.0/babylon.js"></script>
 <script src="js/core.js"></script>
 <script src="js/data/pitches.js"></script>
+<script src="js/data/teams.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/players.js"></script>
 <script src="js/ui.js"></script>

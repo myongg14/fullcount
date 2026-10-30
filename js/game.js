@@ -1,12 +1,11 @@
-// 경기 진행: 한 경기의 규칙과 상태(이닝, 점수, 주자, 볼·스트라이크·아웃, 타순)를 이 파일에서만 바꾼다
+// 경기 진행: 한 경기의 규칙과 상태(이닝, 점수, 주자, 볼·스트라이크·아웃, 타순, 투수·투구 수)를 이 파일에서만 바꾼다
 
 // ---------- 경기 설정 (숫자만 바꿔서 조절) ----------
 // 시작 메뉴는 10단계에서 만든다. 그 전까지는 여기 값으로 정하고, 경기가 끝나면 3/9이닝을 골라 새 경기를 할 수 있다.
 const GAME_SETTINGS = {
   innings: 3,            // 3 또는 9
   myHome: false,         // false = 내 팀이 원정(초에 공격), true = 내 팀이 홈(말에 공격)
-  myTeamName: '내 팀',
-  cpuTeamName: '상대 팀',
+  myTeam: 0,             // 내 팀: data/teams.js의 TEAMS 순서(0 또는 1). 나머지 팀이 상대 팀
   doublePlayChance: 0.3, // 땅볼 아웃 때 1루 주자가 있고 0·1아웃이면 병살이 될 확률
 };
 
@@ -21,12 +20,25 @@ const G = {
   hits: { away: 0, home: 0 },
   line: { away: [], home: [] },          // 이닝별 점수(라인 스코어)
   order: { away: 0, home: 0 },           // 지금 타석에 선 타순(0~8)
+  pitcher: { away: 0, home: 0 },         // 지금 던지는 투수(팀 pitchers 순서, 0 = 선발)
+  pitchCount: { away: [], home: [] },    // 투수별 투구 수
+  usedPitchers: { away: [0], home: [0] },// 이미 나온 투수(한 번 내려가면 다시 못 나옴)
   next: 'pa',                            // 결과 화면 뒤에 할 일: pa(다음 타석) | switch(공수 교대) | over(경기 끝) | final(새 경기 고르기)
 };
 
 const battingSide = () => (G.top ? 'away' : 'home');
+const fieldingSide = () => (G.top ? 'home' : 'away');
 const isMine = side => (side === 'home') === G.myHome;
-const teamName = side => (isMine(side) ? GAME_SETTINGS.myTeamName : GAME_SETTINGS.cpuTeamName);
+const team = side => TEAMS[isMine(side) ? GAME_SETTINGS.myTeam : 1 - GAME_SETTINGS.myTeam];
+const teamName = side => team(side).name;
+const currentBatter = () => team(battingSide()).batters[G.order[battingSide()]];
+const currentPitcher = () => team(fieldingSide()).pitchers[G.pitcher[fieldingSide()]];
+const currentPitchCount = () => G.pitchCount[fieldingSide()][G.pitcher[fieldingSide()]] || 0;
+// 투수 체력: 투구 수가 체력의 절반을 넘으면 지치기 시작해, 체력 x 1.3개쯤에서 완전히 지침(0 = 쌩쌩, 1 = 완전히 지침)
+const pitcherFatigue = () => {
+  const st = currentPitcher().stamina;
+  return clamp((currentPitchCount() - st * 0.5) / (st * 0.8), 0, 1);
+};
 const inningText = () => `${G.inning}회 ${G.top ? '초' : '말'}`;
 
 // ---------- 진루 ----------
@@ -54,6 +66,37 @@ const walkRunners = () => {
   return scored;
 };
 
+// ---------- 투수 ----------
+// 공을 한 개 던질 때마다 부른다
+const pitchThrown = () => {
+  const side = fieldingSide(), i = G.pitcher[side];
+  G.pitchCount[side][i] = (G.pitchCount[side][i] || 0) + 1;
+  renderBoard();
+};
+const bullpenOptions = () => team(fieldingSide()).pitchers
+  .map((p, i) => ({ p, i }))
+  .filter(({ i }) => !G.usedPitchers[fieldingSide()].includes(i));
+const changePitcher = i => {
+  const side = fieldingSide();
+  G.pitcher[side] = i; G.usedPitchers[side].push(i);
+  setPitcherHand(currentPitcher().throws);
+  renderPitchCards(); renderBoard();
+  banner('투수 교체', `${currentPitcher().name} · ${currentPitcher().throws === 'L' ? '좌투' : '우투'}`, 1300);
+};
+// 컴퓨터 팀은 투수가 많이 지치면 알아서 불펜 투수로 바꾼다
+const cpuBullpenCheck = () => {
+  if (isMine(fieldingSide()) || pitcherFatigue() < 0.85) return;
+  const next = bullpenOptions()[0];
+  if (next) changePitcher(next.i);
+};
+// 타석 시작 전: 타자·투수 모습과 화면 정리
+const preparePA = () => {
+  cpuBullpenCheck();
+  setBatterSide(currentBatter().bats);
+  setPitcherHand(currentPitcher().throws);
+  renderPitchCards(); renderBoard();
+};
+
 // ---------- 공수와 모드 ----------
 // 내 팀이 공격이면 타격, 수비면 투구
 const applyMode = () => {
@@ -61,14 +104,17 @@ const applyMode = () => {
   S.mode = m;
   $('batDock').hidden = m !== 'bat'; $('pitchDock').hidden = m !== 'pitch';
   batter.getChildMeshes().forEach(x => { x.material.alpha = m === 'bat' ? 0.55 : 1; });
+  catcher.setEnabled(m === 'pitch'); mitt.setEnabled(m === 'pitch');
 };
 const startHalf = () => {
   const side = battingSide();
   G.outs = 0; G.bases = [false, false, false]; resetCount();
   G.line[side][G.inning - 1] = 0;
-  applyMode(); renderBoard();
+  applyMode(); preparePA();
   landMark.isVisible = false; ball.isVisible = false; shadow.isVisible = false;
-  banner(inningText(), `${teamName(side)} 공격 · ${S.mode === 'bat' ? '내가 타격' : '내가 투구'}`, 1500);
+  if (!$('banner').classList.contains('show')) {
+    banner(inningText(), `${teamName(side)} 공격 · ${S.mode === 'bat' ? '내가 타격' : '내가 투구'}`, 1500);
+  }
   S.phase = 'idle';
   if (S.mode === 'bat') {
     hint('공이 홈플레이트에 들어오는 순간, 공이 있는 곳을 탭하세요.');
@@ -81,8 +127,9 @@ const newGame = (innings = GAME_SETTINGS.innings) => {
     innings, myHome: GAME_SETTINGS.myHome, inning: 1, top: true,
     runs: { away: 0, home: 0 }, hits: { away: 0, home: 0 },
     line: { away: [], home: [] }, order: { away: 0, home: 0 }, next: 'pa',
+    pitcher: { away: 0, home: 0 }, pitchCount: { away: [], home: [] }, usedPitchers: { away: [0], home: [0] },
   });
-  $('nextBtn').hidden = true; $('newGame').hidden = true;
+  $('nextBtn').hidden = true; $('newGame').hidden = true; $('banner').classList.remove('show');
   startHalf();
 };
 
@@ -129,7 +176,7 @@ const showFinal = () => {
   const me = G.myHome ? 'home' : 'away', cpu = G.myHome ? 'away' : 'home';
   const d = G.runs[me] - G.runs[cpu];
   banner(d > 0 ? '승리!' : d < 0 ? '패배' : '무승부',
-    `${GAME_SETTINGS.myTeamName} ${G.runs[me]} : ${G.runs[cpu]} ${GAME_SETTINGS.cpuTeamName}`, 0);
+    `${teamName(me)} ${G.runs[me]} : ${G.runs[cpu]} ${teamName(cpu)}`, 0);
   hint('경기 끝. 몇 이닝으로 새 경기를 할지 고르세요.');
   $('stats').textContent = '경기 끝';
   $('batDock').hidden = true; $('pitchDock').hidden = true;
@@ -143,7 +190,7 @@ const nextPA = () => {
     if (G.top) G.top = false; else { G.top = true; G.inning++; }
     return startHalf();
   }
-  resetCount(); renderBoard(); landMark.isVisible = false; ball.isVisible = false; shadow.isVisible = false;
+  resetCount(); preparePA(); landMark.isVisible = false; ball.isVisible = false; shadow.isVisible = false;
   S.phase = 'idle';
   if (S.mode === 'bat') setTimeout(startAIPitch, 700); else readyPitch();
 };
