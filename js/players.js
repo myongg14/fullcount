@@ -47,6 +47,13 @@ const instanceSource = (shape, material) => {
 const PMAT = {
   skin: mat('#f2c9a0'), shoe: mat('#25252a'), eye: mat('#1a1a1a'), brow: mat('#4a3322'),
   glove: mat('#8a4f24'), mask: mat('#3a3d42'),
+  shadow: mat('#000000', { alpha: 0.3 }),
+};
+// 발밑 가짜 그림자(실제 그림자 계산은 무거워서 쓰지 않는다)
+SHAPE_MAKERS.shadow = () => {
+  const d = BABYLON.MeshBuilder.CreateDisc('pshadow', { radius: 0.42, tessellation: 20 }, scene);
+  d.bakeTransformIntoVertices(BABYLON.Matrix.RotationX(Math.PI / 2));
+  return d;
 };
 // 글자를 그린 투명 텍스처(가슴 팀 이름, 등번호)
 const textMat = (text, color, w, h, font) => {
@@ -128,10 +135,10 @@ const toLocalDir = (parent, dir) => {
 };
 
 // 선수 한 명을 root 아래에 만든다. 앞(+z)을 바라보고 발이 y = 0에 닿는다.
-// role: 'batter' | 'pitcher' | 'catcher' | 'fielder', own: true면 재질을 따로 가져서 이 선수만 반투명하게 할 수 있음
+// role: 'batter' | 'runner' | 'pitcher' | 'catcher' | 'fielder', own: true면 재질을 따로 가져서 이 선수만 반투명하게 할 수 있음
 // hand: 1 = 오른손잡이(우투·우타), -1 = 왼손잡이
 const buildRig = (root, { role, kit, num, own = false, alpha = 1, hand = 1 }) => {
-  const rig = { root, role, mats: [], meshes: [] };
+  const rig = { root, role, hand, mats: [], meshes: [] };
   const ownMats = {};
   const node = (name, parent, x, y, z) => {
     const n = new BABYLON.TransformNode(name, scene);
@@ -180,7 +187,7 @@ const buildRig = (root, { role, kit, num, own = false, alpha = 1, hand = 1 }) =>
     part('brow', PMAT.brow, rig.head, s * 0.065, 0.225, 0.15).rotation.z = s * 0.15;
   });
   // 모자 / 헬멧 / 포수 장비
-  if (role === 'batter') {
+  if (role === 'batter' || role === 'runner') {
     part('helmet', kit.cap, rig.head, 0, 0.17, 0);
     part('brim', kit.cap, rig.head, 0, 0.2, 0.13).scaling.z = 0.8;
     // 귀 보호대는 투수를 바라보는 쪽(우타는 왼쪽)
@@ -220,6 +227,11 @@ const buildRig = (root, { role, kit, num, own = false, alpha = 1, hand = 1 }) =>
     g.scaling.set(0.6, 1, 1);
   }
   rig.throwArm = rig.shoulder[hand === 1 ? 'R' : 'L'];
+  // 발밑 그림자: 투명도가 선수와 따로 놀도록 항상 공용 재질의 인스턴스로
+  if (role !== 'catcher') {
+    const sh = instanceSource('shadow', PMAT.shadow).createInstance('shadow');
+    sh.parent = root; sh.position.set(0, 0.03, 0); sh.scaling.set(1, 1, 0.8); sh.isPickable = false;
+  }
   return rig;
 };
 const disposeRig = root => {
@@ -230,14 +242,26 @@ const disposeRig = root => {
   root.metadata.rig = null;
 };
 // 같은 차림이면 다시 만들지 않는다
+// 같은 차림이면 다시 만들지 않고 자세만 처음으로 되돌린다
 const dressRig = (root, opts) => {
   const key = [opts.role, opts.kit.key, opts.num, opts.own, opts.alpha, opts.hand].join('|');
-  if (root.metadata && root.metadata.key === key) return root.metadata.rig;
+  if (root.metadata && root.metadata.key === key) { restPose(root.metadata.rig); return root.metadata.rig; }
   disposeRig(root);
   const rig = buildRig(root, opts);
   root.metadata = { rig, key };
-  POSES[opts.role] && POSES[opts.role](rig, opts.hand || 1);
+  restPose(rig);
   return rig;
+};
+// 모든 관절을 곧게 편 뒤 역할별 기본 자세를 잡는다
+const restPose = rig => {
+  rig.root.rotation.x = 0; rig.root.rotation.z = 0;
+  rig.pelvis.position.y = 0.88; rig.pelvis.rotation.set(0, 0, 0);
+  rig.spine.rotation.set(0, 0, 0); rig.head.rotation.set(0, 0, 0);
+  for (const [k, s] of [['R', 1], ['L', -1]]) {
+    rig.shoulder[k].rotation.set(0, 0, s * 0.12); rig.elbow[k].rotation.set(0, 0, 0); rig.hand[k].rotation.set(0, 0, 0);
+    rig.hip[k].rotation.set(0, 0, 0); rig.knee[k].rotation.set(0, 0, 0); rig.foot[k].rotation.set(0, 0, 0);
+  }
+  POSES[rig.role] && POSES[rig.role](rig, rig.hand || 1);
 };
 
 // ---------- 자세 ----------
@@ -248,7 +272,8 @@ const POSES = {
     rig.elbow.R.rotation.x = -0.4; rig.elbow.L.rotation.x = -0.6;
     rig.throwArm.rotation.x = 0.3;
   },
-  fielder: rig => POSES.pitcher(rig),
+  fielder: rig => poseReady(rig),
+  runner: rig => { rig.elbow.R.rotation.x = -0.3; rig.elbow.L.rotation.x = -0.3; },
   // 타자: 무릎을 굽히고 두 손을 배트 손잡이(몸 앞 가슴 높이) 쪽으로
   batter: (rig, hand) => {
     rig.pelvis.position.y -= 0.06;
@@ -280,6 +305,51 @@ const POSES = {
   },
 };
 
+// ---------- 움직이는 자세(매 프레임 부른다) ----------
+// a: 앞(+)/뒤(-)로 드는 각도, side: 옆으로 벌리는 정도. 아래로 늘어진 팔다리가 향할 방향
+const limbDir = (a, side = 0) => new BABYLON.Vector3(side, -Math.cos(a), Math.sin(a));
+// 달리기: 팔과 다리를 번갈아 흔든다. phase는 걸음이 진행될수록 커지는 값, amt는 세기(0~1)
+const poseRun = (rig, phase, amt = 1) => {
+  const sw = Math.sin(phase) * amt;
+  rig.pelvis.position.y = 0.86 + 0.035 * Math.abs(Math.cos(phase)) * amt;
+  rig.spine.rotation.set(0.22 * amt, 0, 0);
+  pointLimb(rig.hip.R, limbDir(0.85 * sw, 0.04)); pointLimb(rig.hip.L, limbDir(-0.85 * sw, -0.04));
+  pointLimb(rig.knee.R, limbDir(-(0.25 + 1.2 * Math.max(0, -sw)))); pointLimb(rig.knee.L, limbDir(-(0.25 + 1.2 * Math.max(0, sw))));
+  pointLimb(rig.shoulder.R, limbDir(-0.8 * sw, 0.12)); pointLimb(rig.shoulder.L, limbDir(0.8 * sw, -0.12));
+  pointLimb(rig.elbow.R, limbDir(1.3 * amt + 0.1)); pointLimb(rig.elbow.L, limbDir(1.3 * amt + 0.1));
+};
+// 수비 준비 자세: 무릎을 굽히고 몸을 숙이고 두 손을 앞으로
+const poseReady = rig => {
+  rig.pelvis.position.y = 0.76;
+  rig.spine.rotation.set(0.35, 0, 0);
+  for (const [k, s] of [['R', 1], ['L', -1]]) {
+    pointLimb(rig.hip[k], limbDir(0.3, s * 0.32)); pointLimb(rig.knee[k], limbDir(-0.75));
+    pointLimb(rig.shoulder[k], limbDir(0.75, s * 0.2)); pointLimb(rig.elbow[k], limbDir(0.5));
+  }
+};
+// 던지기: u 0 → 1 동안 던지는 팔을 뒤로 젖혔다가 앞으로
+const poseThrow = (rig, u) => {
+  const k = rig.hand === -1 ? 'L' : 'R', g = k === 'R' ? 'L' : 'R';
+  pointLimb(rig.shoulder[k], limbDir(-2.5 + 3.8 * u, (k === 'R' ? 1 : -1) * 0.25));
+  pointLimb(rig.elbow[k], limbDir(0.6 - 0.5 * u));
+  pointLimb(rig.shoulder[g], limbDir(1.4 - 0.8 * u, (g === 'R' ? 1 : -1) * 0.2));
+  rig.spine.rotation.set(0.15 + 0.25 * u, 0, 0);
+};
+// 잡기: 글러브 낀 손을 앞쪽 위로
+const poseCatch = rig => {
+  const g = rig.hand === -1 ? 'R' : 'L';
+  pointLimb(rig.shoulder[g], new BABYLON.Vector3(0, 0.75, 0.66)); pointLimb(rig.elbow[g], limbDir(0.2));
+};
+// 다이빙: 몸을 앞으로 던지고 두 팔을 머리 위로 뻗는다(u 0 → 1)
+const poseDive = (rig, u) => {
+  rig.root.rotation.x = 1.35 * u;
+  rig.pelvis.position.y = 0.88 - 0.5 * u;
+  for (const [k, s] of [['R', 1], ['L', -1]]) {
+    pointLimb(rig.shoulder[k], limbDir(1 + 1.9 * u, s * 0.1)); pointLimb(rig.elbow[k], limbDir(0.1));
+    pointLimb(rig.hip[k], limbDir(-0.25 * u, s * 0.1)); pointLimb(rig.knee[k], limbDir(-0.3 * u));
+  }
+};
+
 // ---------- 경기장에 선 선수들 ----------
 const pitcher = new BABYLON.TransformNode('pitcher', scene);
 pitcher.position.set(0, 0.24, MOUND_Z); pitcher.rotation.y = Math.PI;
@@ -309,8 +379,9 @@ catcher.setEnabled(false); mitt.setEnabled(false);
 let batSide = 1;
 const setBatterSide = bats => {
   batSide = bats === 'L' ? -1 : 1;
-  batter.position.x = -0.95 * batSide; batter.rotation.y = batSide * Math.PI / 2;
-  batPivot.position.x = -0.62 * batSide;
+  batter.setEnabled(true);
+  batter.position.set(-0.95 * batSide, 0, 0.1); batter.rotation.set(0, batSide * Math.PI / 2, 0);
+  batPivot.position.set(-0.62 * batSide, 1.1, 0.1);
   batPivot.rotation.set(BAT_REST.x, BAT_REST.y * batSide, BAT_REST.z * batSide);
 };
 // 던지는 팔: 우투는 투수의 오른쪽(포수가 볼 때 왼쪽), 좌투는 반대
@@ -323,6 +394,11 @@ const dressPlayers = () => {
   const bKit = kitFor(teamIndex(bs), bs === 'home'), fKit = kitFor(teamIndex(fs), fs === 'home');
   dressRig(batter, { role: 'batter', kit: bKit, num: currentBatter().num, own: true,
     alpha: S.mode === 'bat' ? 0.55 : 1, hand: batSide });
+  pitcher.position.set(0, 0.24, MOUND_Z); pitcher.rotation.set(0, Math.PI, 0);
   pitchArm = dressRig(pitcher, { role: 'pitcher', kit: fKit, num: currentPitcher().num, hand: pitchHand }).throwArm;
+  // 포수: 투수 시점용으로 낮추고 반투명하게. 타격 시점에서는 카메라를 가리므로 숨긴다
+  catcher.position.set(0, CATCHER_VIEW.y, -0.95); catcher.scaling.setAll(CATCHER_VIEW.scale);
+  catcher.setEnabled(S.mode === 'pitch');
   dressRig(catcher, { role: 'catcher', kit: fKit, num: 2, own: true, alpha: CATCHER_VIEW.alpha });
+  dressField(fKit, bKit);     // 나머지 수비수 7명과 주자(play.js)
 };

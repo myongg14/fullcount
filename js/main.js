@@ -10,6 +10,7 @@ const pitchView = () => ({
   tgt: new BABYLON.Vector3(0, (ZONE.yLo + ZONE.yHi) / 2, 0), fov: PITCH_VIEW.fov,
 });
 let camPos = camHome.pos.clone();
+let lastT = 0;
 let camTgt = camHome.tgt.clone();
 scene.onBeforeRenderObservable.add(() => {
   const t = now();
@@ -17,12 +18,25 @@ scene.onBeforeRenderObservable.add(() => {
   if (S.phase === 'windup') {
     const u = (t - windT) / 700;
     if (pitchArm) pitchArm.rotation.x = -u * Math.PI * 1.6;
+    // 글러브 쪽 다리를 들었다가 내딛는다
+    const pr = rigOf(pitcher);
+    if (pr) {
+      const g = pitchHand === 1 ? 'L' : 'R', lift = Math.sin(Math.PI * Math.min(u, 1));
+      pointLimb(pr.hip[g], limbDir(1.3 * lift)); pointLimb(pr.knee[g], limbDir(-1.6 * lift));
+      if (u >= 1) restPose(pr);
+    }
     if (u >= 1) { if (pitchArm) pitchArm.rotation.x = 0.3; const cb = windCb; windCb = null; cb && cb(); }
   }
   // 스윙 애니메이션 0.18초
   const su = (t - swingAnim) / 180;
-  if (su >= 0 && su <= 1) batPivot.rotation.set(0, -su * Math.PI * 1.1 * batSide, (-0.6 - su * 0.9) * batSide);
-  else if (su > 2.5) batPivot.rotation.set(BAT_REST.x, BAT_REST.y * batSide, BAT_REST.z * batSide);
+  const br = rigOf(batter);
+  // 플레이 중이거나 배트를 내려놓은 뒤에는 스윙 동작을 건드리지 않는다
+  if (!play && batPivot.position.y > 0.5) {
+    if (su >= 0 && su <= 1) batPivot.rotation.set(0, -su * Math.PI * 1.1 * batSide, (-0.6 - su * 0.9) * batSide);
+    else if (su > 2.5) batPivot.rotation.set(BAT_REST.x, BAT_REST.y * batSide, BAT_REST.z * batSide);
+    // 스윙할 때 몸통이 투수 쪽으로 돈다
+    if (br) br.spine.rotation.y = su >= 0 && su <= 2.5 ? -Math.min(su, 1) * 1.1 * batSide * (su > 1 ? Math.max(0, 1 - (su - 1) / 1.5) : 1) : 0;
+  }
   // 포수 미트: 공이 들어올 곳으로 움직인다
   const mt = S.phase === 'pitch' && S.pitch ? new BABYLON.Vector3(S.pitch.target.x, S.pitch.target.y, MITT_REST.z) : MITT_REST;
   mitt.position = BABYLON.Vector3.Lerp(mitt.position, mt, 0.15);
@@ -47,11 +61,23 @@ scene.onBeforeRenderObservable.add(() => {
   }
   if (S.phase === 'judge' && !flight && S.mode === 'bat' && ball.position.z < -0.2) ball.isVisible = false;
 
-  if (flight) {
+  // 수비·주루 플레이(play.js): 카메라는 공과 주자가 잘 보이는 높은 곳에서 따라간다
+  if (play) {
+    updatePlay(Math.min(0.1, (t - (lastT || t)) / 1000));
+    if (play) {
+      camTgt = BABYLON.Vector3.Lerp(camTgt, playFocus(), 0.06);
+      camPos = BABYLON.Vector3.Lerp(camPos, new BABYLON.Vector3(...PLAY_TUNING.camPos), 0.05);
+      cam.fov += (PLAY_TUNING.camFov - cam.fov) * 0.05;
+    }
+  } else if (flight) {
     const i = Math.max(0, Math.floor((t - flight.t0) / (1000 / 60) * 1.4));
     const pts = flight.pts;
     const p = pts[Math.min(i, pts.length - 1)];
     ball.position.copyFrom(p); shadow.position.set(p.x, 0.03, p.z);
+    // 공 그림자는 높이 뜰수록 크고 옅게, 떨어질 지점 표시는 깜빡이듯 커졌다 작아진다
+    const hgt = Math.max(0, p.y);
+    shadow.scaling.setAll(1 + hgt * 0.06); shadow.visibility = clamp(1 - hgt / 40, 0.35, 1);
+    landMark.scaling.setAll(1.6 + Math.sin(t / 120) * 0.5);
     camTgt = BABYLON.Vector3.Lerp(camTgt, new BABYLON.Vector3(p.x, Math.max(1, p.y * 0.6), Math.max(p.z, 8)), 0.08);
     camPos = BABYLON.Vector3.Lerp(camPos, camHome.pos, 0.08);
     cam.fov += (camHome.fov - cam.fov) * 0.08;
@@ -62,8 +88,14 @@ scene.onBeforeRenderObservable.add(() => {
     camPos = BABYLON.Vector3.Lerp(camPos, v.pos, 0.08);
     cam.fov += (v.fov - cam.fov) * 0.08;
   }
+  // 공이 숨으면 꼬리도 숨긴다. 타격 시점에서는 공이 홈플레이트를 지나 카메라 앞으로 오면 꼬리가 화면을 덮으니 숨긴다
+  if (ballTrail) ballTrail.isVisible = ball.isVisible && !(S.mode === 'bat' && !flight && !play && ball.position.z < 0.3);
+  ballHalo.isVisible = ball.isVisible;
+  if (flight || play) landMark.scaling.setAll(1.6 + Math.sin(t / 120) * 0.5);
+  if (!flight && !play) { shadow.scaling.setAll(1); shadow.visibility = 1; landMark.scaling.setAll(1); }
   cam.position.copyFrom(camPos);
   cam.setTarget(camTgt);
+  lastT = t;
 
   if (aim.active) {
     const sc = shrinkScale(t - aim.start);
@@ -76,6 +108,7 @@ scene.onBeforeRenderObservable.add(() => {
 // ---------- 입력 ----------
 canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
+  if (S.phase === 'play') return skipPlay();   // 플레이 중 탭 = 건너뛰기
   if (S.mode === 'bat') doSwing(e.clientX, e.clientY);
   else startAim(e.clientX, e.clientY);
 });
@@ -85,8 +118,8 @@ window.addEventListener('pointercancel', () => releaseAim());
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 
-document.querySelectorAll('#newGame button').forEach(b => b.onclick = () => newGame(Number(b.dataset.innings)));
 $('nextBtn').onclick = nextPA;
+$('ffBtn').onclick = () => { if (play) { play.speed = PLAY_TUNING.hrFast; $('ffBtn').hidden = true; } };
 $('powerBtn').onclick = () => { S.power = !S.power; $('powerBtn').setAttribute('aria-pressed', S.power); };
 $('slowBtn').onclick = () => {
   S.rookie = !S.rookie; $('slowBtn').setAttribute('aria-pressed', S.rookie);
@@ -99,5 +132,5 @@ window.addEventListener('resize', () => engine.resize());
 engine.runRenderLoop(() => scene.render());
 scene.executeWhenReady(() => {
   $('loading').hidden = true;
-  newGame();
+  showMenu();
 });

@@ -43,9 +43,23 @@ const judgeBatted = (ev, la, dir) => {
 const judgeBattedBase = (ev, la, dir) => {
   const fl = simFlight(ev, la, dir);
   if (Math.abs(dir) > 45) return { kind: 'foul', fl };
-  // 펜스를 넘을 때의 높이로 홈런 판정
-  const atWall = fl.pts.find(q => Math.hypot(q.x, q.z) >= 105);
-  if (atWall && atWall.y > 3) return { kind: 'hr', fl };
+  // 담장(각도마다 거리가 다름)에 닿는 순간의 높이로 판정: 담장보다 높으면 홈런, 낮으면 담장 직격
+  const wi = fenceCrossIndex(fl.pts);
+  if (wi >= 0) {
+    const atWall = fl.pts[wi];
+    if (atWall.y > FENCE.height) {
+      // 홈런: 비행 거리는 그대로 두고, 공은 외야 관중석에 떨어지는 곳에서 멈춘다
+      const si = fl.pts.findIndex((q, i) => i > wi && q.y <= bleacherFloor(Math.atan2(q.x, q.z) * 180 / Math.PI, Math.hypot(q.x, q.z)));
+      if (si > 0) { fl.pts = fl.pts.slice(0, si + 1); fl.land = fl.pts[si]; }
+      return { kind: 'hr', fl };
+    }
+    // 담장 직격: 담장 앞에서 공이 아래로 떨어진다
+    const hitPt = fl.pts[wi], back = hitPt.scale(1 - 0.4 / Math.hypot(hitPt.x, hitPt.z));
+    const pts = fl.pts.slice(0, wi);
+    for (let i = 1; i <= 24; i++) pts.push(new BABYLON.Vector3(back.x, Math.max(0, hitPt.y * (1 - (i / 24) ** 2)), back.z));
+    fl.pts = pts; fl.land = pts[pts.length - 1]; fl.dist = Math.hypot(back.x, back.z);
+    return { kind: 'hit', label: '펜스 직격 2루타', bases: 2, fl };
+  }
   if (la > 50) return { kind: 'out', label: '내야 뜬공', fl };
   if (la < 8) {
     const p = ev > 150 ? 0.45 : ev > 125 ? 0.25 : 0.1;
@@ -56,7 +70,7 @@ const judgeBattedBase = (ev, la, dir) => {
     if (Math.random() < p) return { kind: 'hit', label: fl.dist > 70 ? '2루타' : '안타', bases: fl.dist > 70 ? 2 : 1, fl };
     return { kind: 'out', label: '라인드라이브 아웃', fl };
   }
-  if (fl.dist > 95 && Math.random() < 0.5) return { kind: 'hit', label: '펜스 직격 2루타', bases: 2, fl };
+  if (fl.dist > 95 && Math.random() < 0.5) return { kind: 'hit', label: '2루타', bases: 2, fl };
   if (fl.dist > 60 && fl.dist < 80 && Math.random() < 0.25) return { kind: 'hit', label: '텍사스 안타', bases: 1, fl };
   return { kind: 'out', label: '뜬공 아웃', fl };
 };
@@ -102,15 +116,23 @@ const resolveSwing = () => {
     else { ev *= 0.7; la = Math.random() < 0.5 ? rand(-25, -8) : rand(55, 75); }      // 빗맞은 땅볼·뜬공
   }
   const res = judgeBatted(ev, la, dir);
+  res.ev = ev;
   const timing = Math.abs(dt) < win * 0.25 ? '정타 타이밍' : dt < 0 ? '조금 빠름' : '조금 늦음';
   launchFlight(res, `${Math.round(ev)}km/h · ${Math.round(la)}° · ${timing}`);
 };
 
 // ---------- 타구 비행 ----------
 const launchFlight = (res, sub) => {
+  recordBatted(res);
   S.phase = 'flight';
   flight = { res, sub, t0: now(), pts: res.fl.pts };
+  ball.position.copyFrom(res.fl.pts[0]);
   ball.isVisible = true; shadow.isVisible = true;
+  startTrail('hit');
+  // 떨어질 지점을 미리 보여 준다
+  landMark.position.set(res.fl.land.x, 0.04, res.fl.land.z); landMark.isVisible = true;
+  // 파울이 아니면 수비·주루 플레이로(play.js). 결과는 이미 정해져 있다
+  if (res.kind !== 'foul') { flight = null; startPlay(res, sub); }
 };
 const finishFlight = () => {
   const { res, sub } = flight; flight = null;

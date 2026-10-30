@@ -7,6 +7,8 @@ const GAME_SETTINGS = {
   myHome: false,         // false = 내 팀이 원정(초에 공격), true = 내 팀이 홈(말에 공격)
   myTeam: 0,             // 내 팀: data/teams.js의 TEAMS 순서(0 또는 1). 나머지 팀이 상대 팀
   doublePlayChance: 0.3, // 땅볼 아웃 때 1루 주자가 있고 0·1아웃이면 병살이 될 확률
+  // 낮 경기(false) / 밤 경기(true). 주소 끝에 ?night 를 붙여 열면 밤 경기
+  night: /[?&]night\b/.test(location.search),
 };
 
 // ---------- 경기 상태 ----------
@@ -23,6 +25,10 @@ const G = {
   pitcher: { away: 0, home: 0 },         // 지금 던지는 투수(팀 pitchers 순서, 0 = 선발)
   pitchCount: { away: [], home: [] },    // 투수별 투구 수
   usedPitchers: { away: [0], home: [0] },// 이미 나온 투수(한 번 내려가면 다시 못 나옴)
+  box: { away: [], home: [] },           // 타자별 이번 경기 기록(타순 순서)
+  lastPitch: null,                       // 마지막 투구 { name, kmh }
+  pstats: { away: [], home: [] },        // 투수별 기록 { outs, h, r, k }
+  records: { hr: null, ev: null },       // 이번 경기 가장 긴 홈런, 가장 빠른 타구
   next: 'pa',                            // 결과 화면 뒤에 할 일: pa(다음 타석) | switch(공수 교대) | over(경기 끝) | final(새 경기 고르기)
 };
 
@@ -72,6 +78,7 @@ const walkRunners = () => {
 const pitchThrown = () => {
   const side = fieldingSide(), i = G.pitcher[side];
   G.pitchCount[side][i] = (G.pitchCount[side][i] || 0) + 1;
+  if (S.pitch) G.lastPitch = { name: S.pitch.name, kmh: S.pitch.kmh };
   renderBoard();
 };
 const bullpenOptions = () => team(fieldingSide()).pitchers
@@ -105,7 +112,7 @@ const applyMode = () => {
   const m = isMine(battingSide()) ? 'bat' : 'pitch';
   S.mode = m;
   $('batDock').hidden = m !== 'bat'; $('pitchDock').hidden = m !== 'pitch';
-  batter.getChildMeshes().forEach(x => { x.material.alpha = m === 'bat' ? 0.55 : 1; });
+  // 타자 반투명(내가 칠 때)은 dressPlayers()가 유니폼을 입힐 때 정한다
   catcher.setEnabled(m === 'pitch'); mitt.setEnabled(m === 'pitch');
   zoneFrame.setEnabled(m === 'pitch'); zoneLines.setEnabled(m === 'bat');
 };
@@ -131,8 +138,12 @@ const newGame = (innings = GAME_SETTINGS.innings) => {
     runs: { away: 0, home: 0 }, hits: { away: 0, home: 0 },
     line: { away: [], home: [] }, order: { away: 0, home: 0 }, next: 'pa',
     pitcher: { away: 0, home: 0 }, pitchCount: { away: [], home: [] }, usedPitchers: { away: [0], home: [0] },
+    box: { away: newBox(), home: newBox() }, lastPitch: null,
+    pstats: { away: [], home: [] }, records: { hr: null, ev: null },
   });
-  $('nextBtn').hidden = true; $('newGame').hidden = true; $('banner').classList.remove('show');
+  paintCrowd(team('home').colors, team('away').colors);
+  applyTimeOfDay(GAME_SETTINGS.night);
+  $('nextBtn').hidden = true; $('result').hidden = true; $('banner').classList.remove('show');
   startHalf();
 };
 
@@ -148,22 +159,50 @@ const gameOverNow = () => {
   return lastInning() && !G.top;
 };
 
+// ---------- 타자 기록 ----------
+const newBox = () => Array.from({ length: 9 }, () => ({ pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, k: 0, bb: 0 }));
+const batterBox = () => G.box[battingSide()][G.order[battingSide()]];
+// 예: "2타수 1안타 1홈런"
+const boxText = b => (b.pa === 0 ? '첫 타석' : `${b.ab}타수 ${b.h}안타` + (b.hr ? ` ${b.hr}홈런` : '') + (b.bb ? ` ${b.bb}볼넷` : ''));
+
 // ---------- 진행 ----------
 const resetCount = () => { G.balls = 0; G.strikes = 0; };
-// kind: 'hit' | 'hr' | 'out' | 'k' | 'bb', info: { bases, groundOut }
+// 타구 기록: 가장 긴 홈런, 가장 빠른 타구(파울 제외)
+const recordBatted = res => {
+  const who = { name: currentBatter().name, team: teamName(battingSide()) };
+  if (res.kind === 'hr' && (!G.records.hr || res.fl.dist > G.records.hr.dist)) G.records.hr = { dist: Math.round(res.fl.dist), ...who };
+  if (res.kind !== 'foul' && res.ev && (!G.records.ev || res.ev > G.records.ev.kmh)) G.records.ev = { kmh: Math.round(res.ev), ...who };
+};
+// kind: 'hit' | 'hr' | 'out' | 'k' | 'bb', info: { bases, groundOut, dp }
 const endPA = (kind, text, sub, info = {}) => {
   const side = battingSide();
+  const outsBefore = G.outs;
   let scored = 0;
   if (kind === 'k') G.outs++;
   if (kind === 'out') {
-    if (info.groundOut && G.bases[0] && G.outs < 2 && Math.random() < GAME_SETTINGS.doublePlayChance) {
+    // 병살 여부는 플레이를 보여 주기 전에 play.js가 미리 정해서 넘겨준다(info.dp)
+    const dp = info.dp ?? (info.groundOut && G.bases[0] && G.outs < 2 && Math.random() < GAME_SETTINGS.doublePlayChance);
+    if (dp) {
       G.outs += 2; G.bases[0] = false; text = '병살';
     } else G.outs++;
   }
   if (kind === 'bb') scored = walkRunners();
   if (kind === 'hit' || kind === 'hr') { G.hits[side]++; scored = advanceRunners(kind === 'hr' ? 4 : info.bases); }
   G.runs[side] += scored;
-  G.line[side][G.inning - 1] += scored;
+  G.line[side][G.inning - 1] = (G.line[side][G.inning - 1] || 0) + scored;
+  const bx = batterBox();
+  bx.pa++; bx.rbi += scored;
+  if (kind !== 'bb') bx.ab++; else bx.bb++;
+  if (kind === 'hit' || kind === 'hr') bx.h++;
+  if (kind === 'hr') bx.hr++;
+  if (kind === 'k') bx.k++;
+  if (kind === 'hit' || kind === 'hr') crowdCheer(kind === 'hr' ? 2 : 1);
+  // 투수 기록(지금 던지는 투수)
+  const fs = fieldingSide(), pi = G.pitcher[fs];
+  const ps = G.pstats[fs][pi] || (G.pstats[fs][pi] = { outs: 0, h: 0, r: 0, k: 0 });
+  ps.outs += G.outs - outsBefore; ps.r += scored;
+  if (kind === 'hit' || kind === 'hr') ps.h++;
+  if (kind === 'k') ps.k++;
   G.order[side] = (G.order[side] + 1) % 9;
   if (scored) sub = `${scored}점 득점 · ${sub}`;
   G.next = gameOverNow() ? 'over' : G.outs >= 3 ? 'switch' : 'pa';
@@ -171,24 +210,14 @@ const endPA = (kind, text, sub, info = {}) => {
   banner(text, sub, 0);
   S.phase = 'result';
   setTimeout(() => {
+    if (S.phase !== 'result') return;   // 그 사이 메뉴로 나갔으면 버튼을 띄우지 않는다
     $('nextBtn').textContent = { pa: '다음 타석', switch: '공수 교대', over: '경기 결과' }[G.next];
     $('nextBtn').hidden = false; $('nextBtn').focus({ preventScroll: true });
   }, 600);
 };
-const showFinal = () => {
-  const me = G.myHome ? 'home' : 'away', cpu = G.myHome ? 'away' : 'home';
-  const d = G.runs[me] - G.runs[cpu];
-  banner(d > 0 ? '승리!' : d < 0 ? '패배' : '무승부',
-    `${teamName(me)} ${G.runs[me]} : ${G.runs[cpu]} ${teamName(cpu)}`, 0);
-  hint('경기 끝. 몇 이닝으로 새 경기를 할지 고르세요.');
-  $('stats').textContent = '경기 끝';
-  $('batDock').hidden = true; $('pitchDock').hidden = true;
-  G.next = 'final';
-  $('newGame').hidden = false;
-};
 const nextPA = () => {
   $('nextBtn').hidden = true; $('banner').classList.remove('show');
-  if (G.next === 'over') return showFinal();
+  if (G.next === 'over') return showResult();
   if (G.next === 'switch') {
     if (G.top) G.top = false; else { G.top = true; G.inning++; }
     return startHalf();
@@ -201,7 +230,7 @@ const callPitch = (res, sub) => {
   // res: 'ball' | 'strike' | 'foul'
   if (res === 'ball') {
     G.balls++;
-    if (G.balls >= 4) return endPA('bb', '볼넷', sub);
+    if (G.balls >= 4) return startPlay({ kind: 'bb' }, sub);   // 주자가 걸어가는 짧은 플레이 뒤에 결과
     banner('볼', sub, 900);
   } else if (res === 'strike') {
     G.strikes++;
