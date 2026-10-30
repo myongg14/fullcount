@@ -1,4 +1,4 @@
-// 구장: 3D 엔진·카메라·조명, 잔디·흙·베이스·펜스·관중석, 스트라이크존·공, 화면 좌표 변환
+// 구장: 3D 엔진·카메라·조명, 잔디·흙·베이스·파울라인, 스트라이크존·공, 화면 좌표 변환
 
 const canvas = $('game');
 
@@ -57,20 +57,7 @@ const lineMat = mat('#ffffff', { emissive: '#666666' });
   const l = BABYLON.MeshBuilder.CreateGround('fl' + s, { width: 0.1, height: 140 }, scene);
   l.rotation.y = s * Math.PI / 4; l.position.set(s * 70 / Math.SQRT2, 0.03, 70 / Math.SQRT2); l.material = lineMat;
 });
-// 외야 펜스(반지름 105m 호)
-const fenceMat = mat('#1f5a36');
-for (let a = -45; a <= 45; a += 3) {
-  const r = a * Math.PI / 180, R = 105;
-  const f = BABYLON.MeshBuilder.CreateBox('f' + a, { width: 5.6, height: 3, depth: 0.4 }, scene);
-  f.position.set(Math.sin(r) * R, 1.5, Math.cos(r) * R); f.rotation.y = r; f.material = fenceMat;
-}
-// 관중석 띠
-const standMat = mat('#2b3c55');
-for (let a = -60; a <= 60; a += 6) {
-  const r = a * Math.PI / 180, R = 118;
-  const st = BABYLON.MeshBuilder.CreateBox('s' + a, { width: 13, height: 16, depth: 8 }, scene);
-  st.position.set(Math.sin(r) * R, 8, Math.cos(r) * R); st.rotation.y = r; st.rotation.x = -0.35; st.material = standMat;
-}
+// 외야 담장·관중석·전광판은 stadium.js
 
 // 스트라이크존 테두리(조준용)
 const zoneLines = BABYLON.MeshBuilder.CreateLines('zone', { points: [

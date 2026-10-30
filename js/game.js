@@ -23,6 +23,8 @@ const G = {
   pitcher: { away: 0, home: 0 },         // 지금 던지는 투수(팀 pitchers 순서, 0 = 선발)
   pitchCount: { away: [], home: [] },    // 투수별 투구 수
   usedPitchers: { away: [0], home: [0] },// 이미 나온 투수(한 번 내려가면 다시 못 나옴)
+  box: { away: [], home: [] },           // 타자별 이번 경기 기록(타순 순서)
+  lastPitch: null,                       // 마지막 투구 { name, kmh }
   next: 'pa',                            // 결과 화면 뒤에 할 일: pa(다음 타석) | switch(공수 교대) | over(경기 끝) | final(새 경기 고르기)
 };
 
@@ -72,6 +74,7 @@ const walkRunners = () => {
 const pitchThrown = () => {
   const side = fieldingSide(), i = G.pitcher[side];
   G.pitchCount[side][i] = (G.pitchCount[side][i] || 0) + 1;
+  if (S.pitch) G.lastPitch = { name: S.pitch.name, kmh: S.pitch.kmh };
   renderBoard();
 };
 const bullpenOptions = () => team(fieldingSide()).pitchers
@@ -131,7 +134,9 @@ const newGame = (innings = GAME_SETTINGS.innings) => {
     runs: { away: 0, home: 0 }, hits: { away: 0, home: 0 },
     line: { away: [], home: [] }, order: { away: 0, home: 0 }, next: 'pa',
     pitcher: { away: 0, home: 0 }, pitchCount: { away: [], home: [] }, usedPitchers: { away: [0], home: [0] },
+    box: { away: newBox(), home: newBox() }, lastPitch: null,
   });
+  paintCrowd(team('home').colors, team('away').colors);
   $('nextBtn').hidden = true; $('newGame').hidden = true; $('banner').classList.remove('show');
   startHalf();
 };
@@ -147,6 +152,12 @@ const gameOverNow = () => {
   // 마지막 이닝 말이 끝나면 끝(동점이면 연장 없이 무승부)
   return lastInning() && !G.top;
 };
+
+// ---------- 타자 기록 ----------
+const newBox = () => Array.from({ length: 9 }, () => ({ pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, k: 0, bb: 0 }));
+const batterBox = () => G.box[battingSide()][G.order[battingSide()]];
+// 예: "2타수 1안타 1홈런"
+const boxText = b => (b.pa === 0 ? '첫 타석' : `${b.ab}타수 ${b.h}안타` + (b.hr ? ` ${b.hr}홈런` : '') + (b.bb ? ` ${b.bb}볼넷` : ''));
 
 // ---------- 진행 ----------
 const resetCount = () => { G.balls = 0; G.strikes = 0; };
@@ -164,6 +175,13 @@ const endPA = (kind, text, sub, info = {}) => {
   if (kind === 'hit' || kind === 'hr') { G.hits[side]++; scored = advanceRunners(kind === 'hr' ? 4 : info.bases); }
   G.runs[side] += scored;
   G.line[side][G.inning - 1] += scored;
+  const bx = batterBox();
+  bx.pa++; bx.rbi += scored;
+  if (kind !== 'bb') bx.ab++; else bx.bb++;
+  if (kind === 'hit' || kind === 'hr') bx.h++;
+  if (kind === 'hr') bx.hr++;
+  if (kind === 'k') bx.k++;
+  if (kind === 'hit' || kind === 'hr') crowdCheer(kind === 'hr' ? 2 : 1);
   G.order[side] = (G.order[side] + 1) % 9;
   if (scored) sub = `${scored}점 득점 · ${sub}`;
   G.next = gameOverNow() ? 'over' : G.outs >= 3 ? 'switch' : 'pa';

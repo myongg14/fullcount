@@ -11,6 +11,7 @@ const renderBoard = () => {
     $(side + 'Row').classList.toggle('at-bat', side === battingSide());
   }
   G.bases.forEach((on, i) => $('base' + (i + 1)).classList.toggle('on', on));
+  drawScoreboard();
   const b = currentBatter(), p = currentPitcher();
   $('stats').textContent = `${G.order[battingSide()] + 1}번 ${b.name}(${b.bats === 'L' ? '좌' : '우'}타)`
     + ` vs ${p.name}(${p.throws === 'L' ? '좌' : '우'}투 · ${currentPitchCount()}구)`;
@@ -49,6 +50,70 @@ const openBullpen = () => {
   $('bullpen').hidden = false;
 };
 const closeBullpen = () => { $('bullpen').hidden = true; };
+// ---------- 관중석 위 큰 전광판: 상태가 바뀔 때만 다시 그린다 ----------
+let boardKey = '';
+const drawScoreboard = () => {
+  const bs = battingSide(), b = currentBatter(), p = currentPitcher(), bx = batterBox();
+  const cols = Math.max(G.innings, G.inning);
+  const data = {
+    names: [teamName('away'), teamName('home')], line: G.line, runs: G.runs, hits: G.hits, cols,
+    inning: G.inning, top: G.top, bso: [G.balls, G.strikes, G.outs],
+    batter: `${G.order[bs] + 1}번 ${b.name}`, rec: boxText(bx),
+    pitcher: `${p.name}`, pc: currentPitchCount(), last: G.lastPitch,
+  };
+  const key = JSON.stringify(data);
+  if (key === boardKey) return;
+  boardKey = key;
+  const ctx = boardTex.getContext(), W = BOARD_W, H = BOARD_H;
+  const F = '"Do Hyeon", "Apple SD Gothic Neo", sans-serif';
+  ctx.fillStyle = '#0b1610'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#2c5a3c'; ctx.lineWidth = 6; ctx.strokeRect(3, 3, W - 6, H - 6);
+  ctx.textBaseline = 'middle';
+  // 라인 스코어: 팀 | 이닝 1..n | R H
+  const x0 = 24, nameW = 290, rhW = 75, colW = Math.min(64, (W - x0 * 2 - nameW - rhW * 2) / cols);
+  const rowY = [46, 104, 158];
+  ctx.font = `30px ${F}`; ctx.fillStyle = '#9fb8a8'; ctx.textAlign = 'center';
+  for (let i = 0; i < cols; i++) ctx.fillText(String(i + 1), x0 + nameW + colW * (i + 0.5), rowY[0]);
+  ctx.fillText('R', x0 + nameW + colW * cols + rhW * 0.5, rowY[0]);
+  ctx.fillText('H', x0 + nameW + colW * cols + rhW * 1.5, rowY[0]);
+  ['away', 'home'].forEach((side, r) => {
+    const y = rowY[r + 1], atBat = side === bs;
+    ctx.textAlign = 'left'; ctx.font = `38px ${F}`; ctx.fillStyle = atBat ? '#ffc23d' : '#f3f1e6';
+    ctx.fillText((atBat ? '▶ ' : '   ') + teamName(side), x0, y);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#f3f1e6';
+    for (let i = 0; i < cols; i++) {
+      const v = G.line[side][i];
+      if (v != null) ctx.fillText(String(v), x0 + nameW + colW * (i + 0.5), y);
+    }
+    ctx.fillStyle = '#ffc23d'; ctx.font = `44px ${F}`;
+    ctx.fillText(String(G.runs[side]), x0 + nameW + colW * cols + rhW * 0.5, y);
+    ctx.fillStyle = '#f3f1e6';
+    ctx.fillText(String(G.hits[side]), x0 + nameW + colW * cols + rhW * 1.5, y);
+  });
+  ctx.fillStyle = '#2c5a3c'; ctx.fillRect(x0, 192, W - x0 * 2, 3);
+  // 볼·스트라이크·아웃 불
+  const bulbs = (label, n, max, color, y) => {
+    ctx.textAlign = 'left'; ctx.font = `36px ${F}`; ctx.fillStyle = '#f3f1e6'; ctx.fillText(label, x0 + 6, y);
+    for (let i = 0; i < max; i++) {
+      ctx.beginPath(); ctx.arc(x0 + 60 + i * 40, y, 13, 0, Math.PI * 2);
+      ctx.fillStyle = i < n ? color : '#24372b'; ctx.fill();
+    }
+  };
+  bulbs('B', G.balls, 3, '#ffc23d', 240); bulbs('S', G.strikes, 2, '#ff5a4a', 296); bulbs('O', G.outs, 2, '#ff5a4a', 352);
+  ctx.textAlign = 'left'; ctx.font = `30px ${F}`; ctx.fillStyle = '#ffc23d';
+  ctx.fillText(`${G.inning}회 ${G.top ? '초' : '말'}`, x0 + 6, 408);
+  // 타자·투수·마지막 공
+  const tx = 230;
+  ctx.font = `30px ${F}`; ctx.fillStyle = '#9fb8a8'; ctx.fillText('타자', tx, 240);
+  ctx.font = `40px ${F}`; ctx.fillStyle = '#f3f1e6'; ctx.fillText(`${data.batter}  ·  ${data.rec}`, tx + 80, 240);
+  ctx.font = `30px ${F}`; ctx.fillStyle = '#9fb8a8'; ctx.fillText('투수', tx, 300);
+  ctx.font = `40px ${F}`; ctx.fillStyle = '#f3f1e6'; ctx.fillText(`${p.name}  ·  투구 수 ${data.pc}`, tx + 80, 300);
+  ctx.font = `30px ${F}`; ctx.fillStyle = '#9fb8a8'; ctx.fillText('직전 공', tx, 360);
+  ctx.font = `44px ${F}`; ctx.fillStyle = '#ffc23d';
+  ctx.fillText(G.lastPitch ? `${G.lastPitch.name}  ${G.lastPitch.kmh}km/h` : '-', tx + 110, 360);
+  boardTex.update();
+};
+
 let bannerTimer = 0;
 const banner = (text, sub = '', ms = 1300) => {
   const b = $('banner');
