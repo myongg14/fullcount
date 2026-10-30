@@ -15,7 +15,7 @@ const STANDS = {
   outfieldGap: 3,    // 외야 담장에서 외야 관중석까지 거리(m)
   outfieldFront: 3.4,
   seatGap: 0.62,     // 관객 사이 간격(m)
-  fill: 0.72,        // 자리가 찰 확률
+  fill: 0.62,        // 자리가 찰 확률(관객 수). iPad가 느리면 낮추기
 };
 
 // 각도(도, 0 = 가운데, 음수 = 3루 쪽)에 따른 담장 거리. 좌우 98m → 가운데 122m로 부드럽게 늘어난다
@@ -119,10 +119,10 @@ buildSteps('standsOut', OUT_DEGS, outAt, STANDS.outfieldFront);
   net.material = backMat; net.isPickable = false;
 }
 
-// ---------- 관객: 몸통 + 머리. 수천 명을 '씬 인스턴스'로 두 번에 그린다 ----------
+// ---------- 관객: 몸통 + 머리. 수천 명을 '씬 인스턴스'로 두 번에 그린다(한 사람에 삼각형 24개) ----------
 const crowdBody = BABYLON.MeshBuilder.CreateBox('crowdBody', { width: 0.44, height: 0.56, depth: 0.3 }, scene);
 crowdBody.bakeTransformIntoVertices(BABYLON.Matrix.Translation(0, 0.3, 0));
-const crowdHead = BABYLON.MeshBuilder.CreateSphere('crowdHead', { diameter: 0.28, segments: 4 }, scene);
+const crowdHead = BABYLON.MeshBuilder.CreateBox('crowdHead', { size: 0.26 }, scene);   // 멀리서 보이니 머리도 상자로(삼각형 12개)
 crowdHead.bakeTransformIntoVertices(BABYLON.Matrix.Translation(0, 0.74, 0));
 const crowdBodyMat = mat('#ffffff'); crowdBody.material = crowdBodyMat;
 crowdHead.material = mat('#e6bb92');
