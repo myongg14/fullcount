@@ -47,6 +47,13 @@ const instanceSource = (shape, material) => {
 const PMAT = {
   skin: mat('#f2c9a0'), shoe: mat('#25252a'), eye: mat('#1a1a1a'), brow: mat('#4a3322'),
   glove: mat('#8a4f24'), mask: mat('#3a3d42'),
+  shadow: mat('#000000', { alpha: 0.3 }),
+};
+// 발밑 가짜 그림자(실제 그림자 계산은 무거워서 쓰지 않는다)
+SHAPE_MAKERS.shadow = () => {
+  const d = BABYLON.MeshBuilder.CreateDisc('pshadow', { radius: 0.42, tessellation: 20 }, scene);
+  d.bakeTransformIntoVertices(BABYLON.Matrix.RotationX(Math.PI / 2));
+  return d;
 };
 // 글자를 그린 투명 텍스처(가슴 팀 이름, 등번호)
 const textMat = (text, color, w, h, font) => {
@@ -220,6 +227,11 @@ const buildRig = (root, { role, kit, num, own = false, alpha = 1, hand = 1 }) =>
     g.scaling.set(0.6, 1, 1);
   }
   rig.throwArm = rig.shoulder[hand === 1 ? 'R' : 'L'];
+  // 발밑 그림자: 투명도가 선수와 따로 놀도록 항상 공용 재질의 인스턴스로
+  if (role !== 'catcher') {
+    const sh = instanceSource('shadow', PMAT.shadow).createInstance('shadow');
+    sh.parent = root; sh.position.set(0, 0.03, 0); sh.scaling.set(1, 1, 0.8); sh.isPickable = false;
+  }
   return rig;
 };
 const disposeRig = root => {

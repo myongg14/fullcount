@@ -10,6 +10,7 @@ iPad Safari에서 터치로 치고 던지는 카툰 3D 야구 게임. 혼자 만
 - `js/scene.js`: 3D 엔진, 카메라, 조명, 구장, 공.
 - `js/stadium.js`: 외야 담장(좌·우 98m, 가운데 122m, 높이 3m, 파울 폴, 홈런 라인, 거리 표시), 계단식 관중석과 관객(씬 인스턴스), 중앙 외야 전광판. 맨 위 `FENCE`, `STANDS`에서 조절.
 - `js/players.js`: 관절(어깨·팔꿈치·엉덩이·무릎)이 있는 카툰 선수 모델, 유니폼(홈 흰 바탕+줄무늬 / 원정 팀 색, 가슴 팀 이름, 등번호), 타자·투수·포수 자세, 좌/우에 따라 서는 쪽. 같은 모양은 인스턴스로 재사용.
+- `js/lighting.js`: 낮/밤. 밤에는 남색 하늘·별, 조명탑 6개 램프가 켜지고(GlowLayer) 경기장을 비춤. 맨 위 `NIGHT`에서 조절.
 - `js/ui.js`: 화면 위 전광판, 관중석 위 큰 전광판 그리기, 구종 카드, 투수 교체 창, 결과 배너, 안내 문구.
 - `js/pitching.js`: 투구 궤적(구종·숙련도·좌우·체력 반영), 컴퓨터 투수, 내 투구 조준과 컴퓨터 타자. 맨 위 `PITCH_TUNING`(테두리 제구 어려움), `AI_BAT_TUNING`(컴퓨터 타자)에서 조절.
 - `js/batting.js`: 타구 계산과 판정, 내 스윙 판정. 맨 위 `BAT_TUNING`에서 타격 판정 폭과 존 끝 공의 어려움을 조절.
@@ -18,5 +19,8 @@ iPad Safari에서 터치로 치고 던지는 카툰 3D 야구 게임. 혼자 만
 - `prompts/v0.2-update-prompts.md`: v0.2(한 경기)를 만들기 위한 코드 작업용 단계별 프롬프트.
 
 ## iPad에서 열기
+
+주소 끝에 `?night`를 붙이면(예: `https://myongg14.github.io/fullcount/?night`) 밤 경기로 열린다. 기본값은 `js/game.js`의 `GAME_SETTINGS.night`.
+
 
 저장소 Settings → Pages에서 Source를 `main` 브랜치 `/ (root)`로 정하면 `https://myongg14.github.io/fullcount/` 주소로 열 수 있다.

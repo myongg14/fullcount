@@ -7,6 +7,8 @@ const GAME_SETTINGS = {
   myHome: false,         // false = 내 팀이 원정(초에 공격), true = 내 팀이 홈(말에 공격)
   myTeam: 0,             // 내 팀: data/teams.js의 TEAMS 순서(0 또는 1). 나머지 팀이 상대 팀
   doublePlayChance: 0.3, // 땅볼 아웃 때 1루 주자가 있고 0·1아웃이면 병살이 될 확률
+  // 낮 경기(false) / 밤 경기(true). 주소 끝에 ?night 를 붙여 열면 밤 경기
+  night: /[?&]night\b/.test(location.search),
 };
 
 // ---------- 경기 상태 ----------
@@ -108,7 +110,7 @@ const applyMode = () => {
   const m = isMine(battingSide()) ? 'bat' : 'pitch';
   S.mode = m;
   $('batDock').hidden = m !== 'bat'; $('pitchDock').hidden = m !== 'pitch';
-  batter.getChildMeshes().forEach(x => { x.material.alpha = m === 'bat' ? 0.55 : 1; });
+  // 타자 반투명(내가 칠 때)은 dressPlayers()가 유니폼을 입힐 때 정한다
   catcher.setEnabled(m === 'pitch'); mitt.setEnabled(m === 'pitch');
   zoneFrame.setEnabled(m === 'pitch'); zoneLines.setEnabled(m === 'bat');
 };
@@ -137,6 +139,7 @@ const newGame = (innings = GAME_SETTINGS.innings) => {
     box: { away: newBox(), home: newBox() }, lastPitch: null,
   });
   paintCrowd(team('home').colors, team('away').colors);
+  applyTimeOfDay(GAME_SETTINGS.night);
   $('nextBtn').hidden = true; $('newGame').hidden = true; $('banner').classList.remove('show');
   startHalf();
 };
