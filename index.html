@@ -14,15 +14,21 @@
 <div id="stage"><canvas id="game" aria-label="야구장"></canvas></div>
 
 <div class="board">
+  <div class="score" aria-label="점수">
+    <div class="inning" id="inning">1회 초</div>
+    <div class="teams">
+      <div class="team" id="awayRow"><span id="awayName">원정</span><b id="awayRuns">0</b></div>
+      <div class="team" id="homeRow"><span id="homeName">홈</span><b id="homeRuns">0</b></div>
+    </div>
+    <div class="diamond" aria-label="주자">
+      <span class="base" id="base2"></span><span class="base" id="base3"></span><span class="base" id="base1"></span>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
   <div class="count" aria-live="polite">
     <div class="row b" aria-label="볼">B <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span></div>
     <div class="row s" aria-label="스트라이크">S <span class="bulb"></span><span class="bulb"></span></div>
     <div class="row o" aria-label="아웃">O <span class="bulb"></span><span class="bulb"></span></div>
-  </div>
-  <div class="stats" id="stats">타석 0 · 안타 0 · 홈런 0 · 삼진 0</div>
-  <div class="modes" role="group" aria-label="모드">
-    <button id="modeBat" aria-pressed="true">타격</button>
-    <button id="modePitch" aria-pressed="false">투구</button>
   </div>
 </div>
 
@@ -40,6 +46,10 @@
 <div class="hint" id="hint">공이 홈플레이트에 들어오는 순간, 공이 있는 곳을 탭하세요.</div>
 <div class="banner" id="banner"></div>
 <button class="next" id="nextBtn" hidden>다음 타석</button>
+<div class="new-game" id="newGame" hidden>
+  <button class="next" data-innings="3">새 경기 · 3이닝</button>
+  <button class="next" data-innings="9">새 경기 · 9이닝</button>
+</div>
 <div class="ring" id="aimTarget" hidden></div>
 <div class="ring" id="aimShrink" hidden></div>
 <div class="ring" id="tapMark"></div>

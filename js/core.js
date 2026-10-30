@@ -5,9 +5,9 @@ const MOUND_Z = 18.44;            // 투수판~홈플레이트 거리(m)
 const ZONE = { x: 0.22, yLo: 0.50, yHi: 1.10 };  // 스트라이크존(m)
 
 // ---------- 상태 ----------
+// 화면·조작 상태. 경기 규칙 상태(이닝, 점수, 주자, 카운트)는 game.js의 G에 있다.
 const S = {
-  mode: 'bat', balls: 0, strikes: 0, outs: 0,
-  stats: { pa: 0, hit: 0, hr: 0, k: 0 },
+  mode: 'bat',        // bat(내가 타격) | pitch(내가 투구): 공수에 따라 game.js가 정한다
   phase: 'idle',      // idle | windup | pitch | flight | result
   pitch: null, swing: null, power: false, rookie: true,
   selPitch: 'fast',

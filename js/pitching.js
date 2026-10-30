@@ -23,7 +23,7 @@ const startAIPitch = () => {
   if (S.mode !== 'bat' || S.phase !== 'idle') return;
   const types = Object.keys(PITCHES);
   const type = types[Math.floor(Math.random() * types.length)];
-  const wantStrike = S.balls >= 3 ? 0.85 : S.strikes >= 2 ? 0.45 : 0.62;
+  const wantStrike = G.balls >= 3 ? 0.85 : G.strikes >= 2 ? 0.45 : 0.62;
   const tgt = Math.random() < wantStrike
     ? new BABYLON.Vector3(rand(-ZONE.x, ZONE.x), rand(ZONE.yLo + 0.03, ZONE.yHi - 0.03), 0)
     : new BABYLON.Vector3(rand(-0.42, 0.42), rand(0.3, 1.35), 0);
@@ -73,8 +73,8 @@ const aiBatterDecide = () => {
   const zone = inZone(pc.target);
   const edge = zone ? Math.min(ZONE.x - Math.abs(pc.target.x), pc.target.y - ZONE.yLo, ZONE.yHi - pc.target.y) : 0;
   let swingP = zone ? 0.72 : 0.28;
-  if (S.strikes === 2) swingP += 0.15;
-  if (S.balls === 3) swingP -= 0.15;
+  if (G.strikes === 2) swingP += 0.15;
+  if (G.balls === 3) swingP -= 0.15;
   const sub = `${pc.name} ${pc.kmh}km/h`;
   if (Math.random() > swingP) return callPitch(zone ? 'strike' : 'ball', sub + (zone ? ' · 루킹' : ''));
   const breakBonus = { fast: 0, slider: 0.1, curve: 0.12, change: 0.1 }[pc.type];
