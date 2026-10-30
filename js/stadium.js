@@ -16,6 +16,7 @@ const STANDS = {
   outfieldFront: 3.4,
   seatGap: 0.62,     // 관객 사이 간격(m)
   fill: 0.62,        // 자리가 찰 확률(관객 수). iPad가 느리면 낮추기
+  crowd: false,      // 관객을 그릴지. 프레임이 끊겨서 꺼 둠(true로 바꾸면 다시 보임)
 };
 
 // 각도(도, 0 = 가운데, 음수 = 3루 쪽)에 따른 담장 거리. 좌우 98m → 가운데 122m로 부드럽게 늘어난다
@@ -126,7 +127,7 @@ const crowdHead = BABYLON.MeshBuilder.CreateBox('crowdHead', { size: 0.26 }, sce
 crowdHead.bakeTransformIntoVertices(BABYLON.Matrix.Translation(0, 0.74, 0));
 const crowdBodyMat = mat('#ffffff'); crowdBody.material = crowdBodyMat;
 crowdHead.material = mat('#e6bb92');
-[crowdBody, crowdHead].forEach(m => { m.isPickable = false; m.alwaysSelectAsActiveMesh = true; });
+[crowdBody, crowdHead].forEach(m => { m.isPickable = false; m.alwaysSelectAsActiveMesh = true; m.setEnabled(STANDS.crowd); });
 
 const crowd = { n: 0, matrix: null, baseY: null, phase: null, side: null, cheerT0: -1e9, cheerLevel: 0 };
 {
@@ -146,7 +147,7 @@ const crowd = { n: 0, matrix: null, baseY: null, phase: null, side: null, cheerT
       }
     }
   };
-  for (let k = 0; k < STANDS.rows; k++) {
+  for (let k = 0; STANDS.crowd && k < STANDS.rows; k++) {
     addRow(IN_DEGS, inAt, STANDS.infieldFront + k * STANDS.rowRise, k);
     addRow(OUT_DEGS, outAt, STANDS.outfieldFront + k * STANDS.rowRise, k);
   }
@@ -163,12 +164,15 @@ const crowd = { n: 0, matrix: null, baseY: null, phase: null, side: null, cheerT
     crowd.baseY[i] = s.y; crowd.phase[i] = Math.random() * Math.PI * 2;
     crowd.side[i] = s.side > 180 ? s.side - 360 : s.side;   // 3루 쪽 음수, 1루 쪽 양수
   });
-  crowdBody.thinInstanceSetBuffer('matrix', crowd.matrix, 16, false);
-  crowdHead.thinInstanceSetBuffer('matrix', crowd.matrix, 16, false);
+  if (n) {
+    crowdBody.thinInstanceSetBuffer('matrix', crowd.matrix, 16, false);
+    crowdHead.thinInstanceSetBuffer('matrix', crowd.matrix, 16, false);
+  }
 }
 // 옷 색: 홈팀 색이 가장 많고, 원정팀 색이 조금, 나머지는 여러 색
 const CROWD_COLORS = ['#e8e8e8', '#2b2b2b', '#4d7fc4', '#7bc47f', '#f0d35a', '#b06ac9', '#e98f5a', '#9aa3ad', '#d65a7a'];
 const paintCrowd = (homeColors, awayColors) => {
+  if (!STANDS.crowd) return;
   const col = new Float32Array(crowd.n * 4);
   for (let i = 0; i < crowd.n; i++) {
     const r = Math.random();
@@ -185,6 +189,7 @@ paintCrowd(TEAMS[1].colors, TEAMS[0].colors);
 const CHEER_MS = 2600;
 const crowdCheer = level => { crowd.cheerT0 = now(); crowd.cheerLevel = level; };
 scene.onBeforeRenderObservable.add(() => {
+  if (!STANDS.crowd) return;
   const t = now() - crowd.cheerT0;
   if (t > CHEER_MS + 200 && crowd.cheerLevel === 0) return;
   const lvl = crowd.cheerLevel;
