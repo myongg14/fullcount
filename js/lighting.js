@@ -61,7 +61,7 @@ const fieldLights = [[0, 55, 20], [0, 60, 85]].map(([x, y, z], i) => {
   return l;
 });
 // 램프만 빛나게 하는 빛 번짐 효과(밤에만 켬)
-const glow = new BABYLON.GlowLayer('glow', scene, { mainTextureRatio: 0.25, blurKernelSize: 32 });
+const glow = new BABYLON.GlowLayer('glow', scene, { mainTextureRatio: 0.25, blurKernelSize: 16 });
 glow.intensity = NIGHT.glow;
 lampFaces.forEach(f => glow.addIncludedOnlyMesh(f));
 if (BALL_VIEW.halo) glow.addIncludedOnlyMesh(ballHalo);   // 테두리를 켜면 밤에 은은하게 빛난다
