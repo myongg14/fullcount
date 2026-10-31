@@ -245,8 +245,14 @@ function update(dt) {
   }
   if (phase === 'hit') stepHit(dt);
   if (phase === 'wait' && now >= waitUntil) {
-    if (twoWay && pitcherMode && inning >= totalInnings && oppRuns + score > myRuns) {
-      oppRuns += score;
+    // 끝내기: 마지막 이닝 이후 말 공격 팀(홈)이 앞서면 바로 끝
+    const batHome = myHome ? !pitcherMode : pitcherMode,
+      batRuns = (pitcherMode ? oppRuns : myRuns) + score,
+      fieldRuns = pitcherMode ? myRuns : oppRuns;
+    if (twoWay && batHome && inning >= totalInnings && batRuns > fieldRuns) {
+      ssRuns(score);
+      if (pitcherMode) oppRuns += score;
+      else myRuns += score;
       score = 0;
       endGame();
     } else if (inning > totalInnings) endGame();

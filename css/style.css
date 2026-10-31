@@ -1333,3 +1333,109 @@ body.paused * {
 #teKbo {
   display: none;
 }
+
+/* KBO 리그 화면 */
+#leagueHub,
+#leagueSetup,
+#schedule {
+  z-index: 205;
+}
+#schedule {
+  z-index: 210;
+}
+#lineup {
+  z-index: 250;
+}
+.ls-teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+.ls-team {
+  font: inherit;
+  text-align: left;
+  min-height: 64px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid #3a4468;
+  border-left: 10px solid #888;
+  background: #0c1433;
+  color: var(--cream);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  touch-action: manipulation;
+}
+.ls-team b {
+  font-weight: 400;
+  font-size: 19px;
+}
+.ls-team span {
+  font-size: 14px;
+  color: #9fb0e8;
+}
+.ls-team.on {
+  border-color: var(--gold);
+  background: #2a2a10;
+}
+.lg-cols {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 14px;
+}
+.lg-next {
+  font-size: 17px;
+  line-height: 1.6;
+  background: #0c1433;
+  border: 2px solid #3a4f9a;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.lg-next b {
+  color: var(--gold);
+  font-weight: 400;
+}
+.lg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  text-align: center;
+}
+.lg-table th,
+.lg-table td {
+  padding: 5px 4px;
+  border-bottom: 1px solid #2a3560;
+  font-weight: 400;
+}
+.lg-table th {
+  color: #9fb0e8;
+  font-size: 14px;
+}
+.lg-table tr.mine td {
+  background: rgba(242, 182, 50, 0.25);
+  color: #fff;
+}
+.lg-table tr.cut td {
+  border-bottom: 2px solid var(--gold);
+}
+.lg-side h3 {
+  margin-top: 0;
+}
+.lg-res {
+  font-size: 16px;
+  padding: 6px 8px;
+  margin: 4px 0;
+  border-radius: 8px;
+  background: #0c1433;
+}
+.lg-res.mine {
+  border: 2px solid var(--gold);
+}
+.lg-res b {
+  color: var(--gold);
+  font-weight: 400;
+}
+#schedule .lg-table {
+  font-size: 15px;
+}

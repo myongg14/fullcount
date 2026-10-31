@@ -24,7 +24,7 @@ function updateHud() {
     ? `${myRuns + (pitcherMode ? 0 : score)} : ${oppRuns + (pitcherMode ? score : 0)}`
     : score + (pitcherMode ? '실점' : '점');
   $('inn').textContent =
-    `${Math.min(inning, totalInnings)}회${twoWay ? (pitcherMode ? ' 말' : ' 초') : ''} / ${totalInnings}회`;
+    `${Math.min(inning, totalInnings)}회${twoWay ? (isBottom() ? ' 말' : ' 초') : ''} / ${totalInnings}회`;
   drawDots('bd', 3, balls);
   drawDots('sd', 2, strikes);
   drawDots('od', 2, outs);
