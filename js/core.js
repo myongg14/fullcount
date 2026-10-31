@@ -62,8 +62,10 @@ const LEVELS = {
     lateWindow: 0.09, // 공이 지나간 뒤에도 스윙이 인정되는 시간(초)
     aiTimingError: 1.6, // 컴퓨터 타자 타이밍 오차 배율(클수록 못 침)
     aiQuality: -0.12, // 컴퓨터 타자 타구 질 보정(음수면 약한 타구)
+    ringTime: 1.3, // 투구 링이 줄어드는 시간 배율(클수록 느림)
+    ringWindow: 1.6, // 투구 완벽 판정 폭 배율(클수록 쉬움)
   },
-  pro: { pitchSpeed: 1, swingWindow: 1, lateWindow: 0, aiTimingError: 1, aiQuality: 0 },
+  pro: { pitchSpeed: 1, swingWindow: 1, lateWindow: 0, aiTimingError: 1, aiQuality: 0, ringTime: 1, ringWindow: 1 },
 };
 // 지금 난이도 설정
 const level = () => LEVELS[SETTINGS.level] || LEVELS.pro;
