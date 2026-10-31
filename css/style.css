@@ -378,7 +378,7 @@ body {
   border-color: #ff9a3d;
   box-shadow: 0 0 10px #ff9a3d;
 }
-/* 노란 링: 줄었다 커졌다 반복 */
+/* 노란 링: 크게 나타나 한 번 줄어든다. 초록 띠 안에 들어오면 초록색 */
 #ringY {
   position: absolute;
   left: 50%;
@@ -387,6 +387,20 @@ body {
   border-radius: 50%;
   box-sizing: border-box;
   box-shadow: 0 0 8px #ffe36b;
+  display: none;
+}
+#ringY.in {
+  border-color: #5fd16a;
+  box-shadow: 0 0 12px #5fd16a;
+}
+/* 초록 띠: 이 안에서 손을 떼면 완벽한 릴리스 */
+#ringBand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 6px solid rgba(95, 209, 106, 0.35);
+  border-radius: 50%;
+  box-sizing: border-box;
   display: none;
 }
 #aimM:after {

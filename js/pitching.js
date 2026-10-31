@@ -1,15 +1,19 @@
 // 투구: 투수 데이터와 구종, 공 궤적, 컴퓨터 투수 체력, 투수 시점 조준·세기 막대, 견제·보크, 컴퓨터 타자 스윙, 투수 교체
 
-// 링 제구 설정표: 조준하는 동안 노란 링이 줄었다 커졌다 반복, 흰 링과 겹칠 때 손을 떼면 완벽한 릴리스
+// 링 제구 설정표: 손가락을 대면 노란 링이 크게 나타나 천천히 한 번 줄어든다.
+// 초록 띠(흰 링 둘레) 안에 노란 링이 들어왔을 때 손을 떼면 완벽한 릴리스. 너무 늦으면 링이 작은 채로 멈추고 '좋은 릴리스'.
 const RING_TUNING = {
   enabled: true, // false면 링 없이 예전처럼(세기·체력에 따른 오차만)
+  once: true, // true: 한 번만 줄어들기(쉬움). false: 예전처럼 줄었다 커졌다 반복
+  shrinkMs: 1500, // 노란 링이 가장 크게에서 가장 작게까지 줄어드는 시간(ms, 클수록 쉬움)
+  lateGrade: 'good', // 다 줄어든 뒤 손을 떼면 받는 판정
   whiteR: 22, // 흰 링(목표) 반지름(px)
   minR: 8, // 노란 링 가장 작을 때 반지름(px)
   maxR: 62, // 노란 링 가장 클 때 반지름(px)
-  period: 1100, // 노란 링이 한 번 줄었다 커지는 시간(ms)
-  staminaSpeed: 0.8, // 체력이 0이면 링이 이만큼 더 빨라짐(0.8 = 1.8배)
-  powerSpeed: 0.5, // 세기 막대가 최대면 이만큼 더 빨라짐
-  perfectWindow: 0.1, // 완벽 판정 폭(노란 링 크기 범위에 대한 비율)
+  period: 1100, // (반복 방식일 때) 노란 링이 한 번 줄었다 커지는 시간(ms)
+  staminaSpeed: 0.5, // 체력이 0이면 링이 이만큼 더 빨라짐(0.5 = 1.5배)
+  powerSpeed: 0.3, // 세기 막대가 최대면 이만큼 더 빨라짐
+  perfectWindow: 0.14, // 완벽 판정 폭(노란 링 크기 범위에 대한 비율). 초록 띠 두께가 이 폭
   goodMul: 2.6, // 좋은 릴리스 판정 폭 = 완벽 폭 × 이 값
   edgeRange: 0.1, // 존 테두리에서 이 거리(m) 안을 노리면 '테두리 근처'
   edgeShrink: 0.55, // 테두리를 노릴 때 판정 폭이 줄어드는 비율(최대)
@@ -259,29 +263,53 @@ function edgeness(p) {
       : Math.hypot(Math.max(0, ax - ZONE_HALF_W), Math.max(0, ZONE_BOTTOM - p.y, p.y - ZONE_TOP));
   return clamp(1 - dist / RING_TUNING.edgeRange, 0, 1);
 }
-// 지금 노란 링 반지름(px): 크게 시작해서 줄었다 커지기를 반복. 체력이 낮거나 세기가 셀수록 빠르다
-function ringRadius() {
+// 노란 링 진행 정도(0 처음 ~ 1 다 줄어듦). 체력이 낮거나 세기가 셀수록 빠르고, 루키는 느리다
+function ringProgress() {
   const R = RING_TUNING,
-    speed = 1 + R.staminaSpeed * (1 - myStamina / 100) + R.powerSpeed * ((pitchPower - 0.5) / 0.5),
+    speed = 1 + R.staminaSpeed * (1 - myStamina / 100) + R.powerSpeed * ((pitchPower - 0.5) / 0.5);
+  return ((now - ringT0) * speed) / (R.shrinkMs * level().ringTime);
+}
+// 지금 노란 링 반지름(px)
+function ringRadius() {
+  const R = RING_TUNING;
+  if (R.once) return R.maxR - (R.maxR - R.minR) * Math.min(1, ringProgress());
+  const speed = 1 + R.staminaSpeed * (1 - myStamina / 100) + R.powerSpeed * ((pitchPower - 0.5) / 0.5),
     ph = (((now - ringT0) * speed) / R.period) * Math.PI * 2;
   return R.minR + (R.maxR - R.minR) * (0.5 + 0.5 * Math.cos(ph));
 }
-// 매 프레임: 조준 중이면 노란 링 크기를 바꾼다
+// 완벽 판정 폭(노란 링 크기 범위에 대한 비율). 테두리를 노리면 좁아지고 루키는 넓다
+function ringWindow() {
+  return RING_TUNING.perfectWindow * level().ringWindow * (1 - RING_TUNING.edgeShrink * aimEdge);
+}
+// 초록 띠(완벽 구간) 표시
+const ringBandEl = document.createElement('b');
+ringBandEl.id = 'ringBand';
+aimEl.insertBefore(ringBandEl, ringEl);
+// 매 프레임: 조준 중이면 노란 링 크기와 초록 띠를 바꾼다
 function updateRing() {
   if (!RING_TUNING.enabled || aimPointer == null) {
-    ringEl.style.display = 'none';
+    ringEl.style.display = ringBandEl.style.display = 'none';
     return;
   }
-  const r = ringRadius();
-  ringEl.style.display = 'block';
+  const R = RING_TUNING,
+    r = ringRadius(),
+    half = ringWindow() * (R.maxR - R.minR),
+    r0 = Math.max(R.minR, R.whiteR - half),
+    r1 = R.whiteR + half;
+  ringEl.style.display = ringBandEl.style.display = 'block';
   ringEl.style.width = ringEl.style.height = 2 * r + 'px';
   ringEl.style.margin = -r + 'px 0 0 ' + -r + 'px';
+  ringEl.classList.toggle('in', r >= r0 && r <= r1); // 초록 띠 안이면 노란 링이 초록색: 지금 떼세요
+  ringBandEl.style.width = ringBandEl.style.height = 2 * r1 + 'px';
+  ringBandEl.style.margin = -r1 + 'px 0 0 ' + -r1 + 'px';
+  ringBandEl.style.borderWidth = r1 - r0 + 'px';
 }
 // 손을 뗀 순간 링 판정: 'perfect' 완벽한 릴리스, 'good' 좋은 릴리스, 'bad' 실투
 function ringGrade() {
-  const R = RING_TUNING,
-    m = Math.abs(ringRadius() - R.whiteR) / (R.maxR - R.minR),
-    w = R.perfectWindow * (1 - R.edgeShrink * aimEdge);
+  const R = RING_TUNING;
+  if (R.once && ringProgress() >= 1) return R.lateGrade;
+  const m = Math.abs(ringRadius() - R.whiteR) / (R.maxR - R.minR),
+    w = ringWindow();
   return m <= w ? 'perfect' : m <= w * R.goodMul ? 'good' : 'bad';
 }
 const RELEASE_TEXT = { perfect: '완벽한 릴리스!', good: '좋은 릴리스', bad: '실투!' };
