@@ -145,7 +145,7 @@ function enterLeagueTeam() {
   MY_BENCH = R.batters.slice(9);
   PITCHERS.splice(0, PITCHERS.length, ...R.pitchers);
   TEAM_NAMES.m = k.name;
-  TEAM_COLORS.m = [k.colors[0], k.colors[1], k.colors[2], k.nick, k.colors[3]];
+  TEAM_COLORS.m = kboUniform(k);
   curPitcher = Math.max(0, PITCHERS.indexOf(starterOf(league.my)));
   moundPitcher = null;
   refreshHotZones();
@@ -227,7 +227,7 @@ function leagueApplyMatch() {
   cpuStaff = R.pitchers;
   cpuIdx = Math.max(0, cpuStaff.indexOf(starterOf(m.opp)));
   TEAM_NAMES.o = k.name;
-  TEAM_COLORS.o = [k.colors[0], k.colors[1], k.colors[2], k.nick, k.colors[3]];
+  TEAM_COLORS.o = kboUniform(k);
   curPitcher = Math.max(0, PITCHERS.indexOf(starterOf(league.my)));
   moundPitcher = null;
   refreshHotZones();

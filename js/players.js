@@ -194,10 +194,12 @@ function human(o) {
     spine,
   );
   [0.12, 0.2, 0.28].forEach(y => mk(SPHERE_GEO, wh, 0, y, tz(y), spine, [0.008, 0.008, 0.006]));
+  const numV = o.num || (1 + rand() * 98) | 0;
+  let numCol = dkT ? '#1a1a2a' : '#fff';
   const np = new THREE.Mesh(
     new THREE.PlaneGeometry(0.2, 0.2),
     new THREE.MeshBasicMaterial({
-      map: numTex(o.num || (1 + rand() * 98) | 0, dkT ? '#1a1a2a' : '#fff'),
+      map: numTex(numV, numCol),
       transparent: true,
     }),
   );
@@ -401,8 +403,16 @@ function human(o) {
     La: arm(1),
     Ra: arm(-1),
     ph: 0,
-    mats: [sh, sh, ct, pa],
+    mats: [sh, sh, ct, pa, so, sl],
     chest: setChest,
+    // 등번호 색(밝은 유니폼이면 어둡게)
+    num: col => {
+      if (col === numCol) return;
+      numCol = col;
+      np.material.map.dispose();
+      np.material.map = numTex(numV, col);
+      np.material.needsUpdate = true;
+    },
   };
 }
 // 선수 관절을 차렷 자세로 되돌린다
@@ -900,17 +910,38 @@ function updateBenchClear(t) {
   });
 }
 // 선수 유니폼 색과 가슴 글자를 바꾼다
-function dress(h, a, b, c, t, tc) {
+// 유니폼 입히기: 상의 a, 모자 b, 바지 c, 가슴 글자 t·글자색 tc, 양말 sk(없으면 모자 색), 소매 sv
+function dress(h, a, b, c, t, tc, sk, sv) {
   h.mats[0].color.setHex(a);
   h.mats[1].color.setHex(a);
   h.mats[2].color.setHex(b);
   h.mats[3].color.setHex(c);
+  h.mats[4].color.setHex(sk == null ? b : sk);
+  h.mats[5].color.setHex(sv == null ? UNIFORM.sleeve : sv);
+  h.num(uniLum(a) > 170 ? '#1a1a2a' : '#fff');
   h.chest(t, tc);
+}
+// 색 밝기와 두 색의 차이(RGB 거리)
+const uniLum = x => ((x >> 16) & 255) * 0.3 + ((x >> 8) & 255) * 0.59 + (x & 255) * 0.11;
+const uniGap = (a, b) => Math.hypot(((a >> 16) & 255) - ((b >> 16) & 255), ((a >> 8) & 255) - ((b >> 8) & 255), (a & 255) - (b & 255));
+// 원정 바꿔 입기: 밝은 팀은 짙은 회색, 어두운 팀은 흰색(가슴 글자는 원래 상의 색)
+function altUniform(u) {
+  const light = uniLum(u[0]) > 170,
+    css = '#' + u[0].toString(16).padStart(6, '0');
+  return [light ? UNIFORM.altDark : UNIFORM.altLight, u[1], u[2], u[3], light ? '#fff' : css, u[5], u[6]];
+}
+// 이번 경기 두 팀 유니폼: 상의 색이 비슷하면 원정 팀(내가 홈이면 상대, 아니면 나)이 바꿔 입는다
+function gameUniforms() {
+  const m = TEAM_COLORS.m,
+    o = TEAM_COLORS.o;
+  if (uniGap(m[0], o[0]) >= UNIFORM.clashGap) return { m, o };
+  return myHome ? { m, o: altUniform(o) } : { m: altUniform(m), o };
 }
 // 공격·수비 팀에 맞게 모든 선수 유니폼을 입힌다
 function dressAll() {
-  const bc = TEAM_COLORS[pitcherMode ? 'o' : 'm'],
-    fc = TEAM_COLORS[pitcherMode ? 'm' : 'o'];
+  const U = gameUniforms(),
+    bc = U[pitcherMode ? 'o' : 'm'],
+    fc = U[pitcherMode ? 'm' : 'o'];
   dress(batterRig, ...bc);
   runnerRigs.forEach(r => dress(r, ...bc));
   [pitcherRigR, pitcherRigL, catcherRig, ...fielders.map(f => f.r)].forEach(h => dress(h, ...fc));

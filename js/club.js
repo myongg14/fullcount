@@ -324,7 +324,7 @@ try {
     }),
   );
 }
-const kboTeamColors = k => [k.colors[0], k.colors[1], k.colors[2], k.nick, k.colors[3]];
+const kboTeamColors = kboUniform;
 // 한 경기 시작 때(리그가 아닐 때): 고른 팀을 내 팀·상대 팀으로
 function applyMatchTeams() {
   const o = KBO_BY_CODE[matchPick.opp],

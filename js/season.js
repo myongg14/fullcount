@@ -27,7 +27,7 @@ function applyOpp() {
     const k = KBO_TEAMS.find(t => t.name === o.n);
     TEAM_NAMES.o = o.n;
     // 유니폼: KBO 팀 색(상의, 모자, 바지, 가슴 글자, 글자색)
-    TEAM_COLORS.o = k ? [k.colors[0], k.colors[1], k.colors[2], k.nick, k.colors[3]] : [o.c, o.c, 0xdedbd0, o.s, '#fff'];
+    TEAM_COLORS.o = k ? kboUniform(k) : [o.c, o.c, 0xdedbd0, o.s, '#fff'];
   } else {
     TEAM_NAMES.o = 'BEARS';
     TEAM_COLORS.o = [0x14235a, 0x14235a, 0xdedbd0, 'BEARS', '#fff'];
