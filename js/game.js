@@ -1,9 +1,9 @@
 // 경기 진행: 경기 상태 값, 경기 시작, 다음 투구, 카운트·아웃·이닝, 안타 결과 반영, 시프트·바람, 경기 종료
 
 // 지금 단계: title(타이틀), windup(와인드업), pitch(공이 날아옴), hit(타구), wait(다음 투구 대기), aim(투수 조준), anim(견제 등 연출), over(경기 끝)
-// 콜드게임 설정표: 이 이닝 말이 끝난 뒤부터, 반 이닝이 끝날 때 점수 차가 runs점 이상이면 경기 끝
+// 콜드게임 설정표: afterInning회부터 이닝 중이라도 점수 차가 runs점 이상이 되는 순간 경기 끝
 const MERCY = {
-  afterInning: 3, // 3회 말부터 확인
+  afterInning: 1, // 1회부터(매 회) 확인
   runs: 15, // 이 점수 차 이상이면 끝(아주 크게 하면 끄는 것과 같다)
 };
 // 이번 경기가 콜드게임으로 끝났는지
@@ -602,9 +602,9 @@ function nextHalf() {
   const bottomEnded = myHome ? !pitcherMode : pitcherMode,
     homeRuns = myHome ? myRuns : oppRuns,
     awayRuns = myHome ? oppRuns : myRuns;
-  // 콜드게임: 3회 말이 끝난 뒤부터 15점 차 이상이면 바로 끝(어차피 끝나는 마지막 이닝은 그대로)
+  // 콜드게임: 반 이닝이 끝날 때도 15점 차 이상이면 끝(어차피 끝나는 마지막 이닝은 그대로)
   const normalEnd = inning >= totalInnings && (bottomEnded || homeRuns > awayRuns);
-  if ((inning > MERCY.afterInning || (inning === MERCY.afterInning && bottomEnded)) && Math.abs(myRuns - oppRuns) >= MERCY.runs && !normalEnd) {
+  if (inning >= MERCY.afterInning && Math.abs(myRuns - oppRuns) >= MERCY.runs && !normalEnd) {
     mercyEnd = true;
     score = 0;
     inning = totalInnings + 1;
