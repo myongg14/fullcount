@@ -2,13 +2,28 @@
 
 // 소리 장치(첫 터치 때 만든다)
 let audioCtx;
+// 전체 음량 조절기(모든 소리가 여기를 거쳐 나간다)
+let masterGain;
+// 소리가 나갈 곳
+const audioOut = () => masterGain || audioCtx.destination;
+// 설정의 소리 켜기/끄기와 음량을 적용한다
+function applyVolume() {
+  if (masterGain) masterGain.gain.value = SETTINGS.sound ? SETTINGS.volume : 0;
+}
 // 첫 터치 때 소리 장치를 켠다
 function unlockAudio() {
   if (!audioCtx) {
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.connect(audioCtx.destination);
+      applyVolume();
     } catch (e) {}
   }
+  // iPad는 터치할 때 소리 장치를 다시 깨워야 할 때가 있다(일시정지 중이면 깨우지 않음)
+  try {
+    if (audioCtx && audioCtx.state === 'suspended' && !paused) audioCtx.resume();
+  } catch (e) {}
   startAmbient();
 }
 // 관중 웅성거림 크기 조절기
@@ -34,7 +49,7 @@ function startAmbient() {
   g.gain.value = 0.12;
   s.connect(f);
   f.connect(g);
-  g.connect(audioCtx.destination);
+  g.connect(audioOut());
   s.start();
   ambientGain = g;
 }
@@ -58,7 +73,7 @@ function tone(f, d, v = 0.12, t = 'square') {
   g.gain.setValueAtTime(v, audioCtx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + d);
   o.connect(g);
-  g.connect(audioCtx.destination);
+  g.connect(audioOut());
   o.start();
   o.stop(audioCtx.currentTime + d);
 }
@@ -74,7 +89,7 @@ function batCrack() {
   g.gain.value = 0.8;
   s.buffer = bf;
   s.connect(g);
-  g.connect(audioCtx.destination);
+  g.connect(audioOut());
   s.start();
 }
 // 응원 오르간 멜로디를 연주한다
@@ -128,7 +143,7 @@ function organ(k) {
       g.gain.linearRampToValueAtTime(0, t + d);
       o.connect(fl);
       fl.connect(g);
-      g.connect(audioCtx.destination);
+      g.connect(audioOut());
       o.start(t);
       o.stop(t + d + 0.02);
     });

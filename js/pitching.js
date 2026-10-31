@@ -331,7 +331,7 @@ function aiSwing() {
     po = clamp(CFG.aiOut - (cb - 5) * 0.02, 0.1, 0.45);
   if (rand() < (z ? pz : po)) {
     const e =
-        randRange(-1, 1) * 0.11 +
+        randRange(-1, 1) * 0.11 * level().aiTimingError +
         (k === 'change' ? 0.07 : k === 'curve' ? 0.05 : k === 'slider' || k === 'sinker' ? 0.03 : 0),
       ct = pitch.t0 + pitch.t.d + e * 1000;
     swing = { t0: ct - 90, contactT: ct, miss: false, done: false };

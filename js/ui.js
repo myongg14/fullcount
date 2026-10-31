@@ -428,3 +428,61 @@ function countFps(t) {
     fpsT0 = t;
   }
 }
+// ---------- 타이틀 화면 경기 설정 ----------
+// 설정 버튼들의 켜짐 표시와 안내 글을 지금 설정에 맞춘다
+function renderSettings() {
+  document.querySelectorAll('#settings .seg').forEach(seg => {
+    const key = seg.dataset.key;
+    const cur = key === 'sound' ? (SETTINGS.sound ? 'on' : 'off') : String(SETTINGS[key]);
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === cur));
+  });
+  $('volFill').style.width = Math.round(SETTINGS.volume * 100) + '%';
+  $('volBar').classList.toggle('off', !SETTINGS.sound);
+  $('modeText').textContent = SETTINGS.innings + '회 정식 경기';
+}
+// 설정 하나를 바꾸고 기억한다
+function setSetting(key, v) {
+  if (key === 'innings') SETTINGS.innings = Number(v);
+  else if (key === 'sound') SETTINGS.sound = v === 'on';
+  else SETTINGS[key] = v;
+  saveSettings();
+  renderSettings();
+  if (key === 'tod') setTimeOfDay(titleTod()); // 타이틀 배경도 고른 시간대로
+  if (key === 'sound' || key === 'volume') {
+    unlockAudio();
+    applyVolume();
+  }
+}
+// 설정 칸을 눌러도 경기가 시작되지 않게 막는다
+$('settings').addEventListener('pointerdown', e => e.stopPropagation());
+$('settings').addEventListener('click', e => {
+  const b = e.target.closest('.seg button');
+  if (b) setSetting(b.closest('.seg').dataset.key, b.dataset.v);
+});
+// 음량 막대 드래그
+{
+  const bar = $('volBar');
+  const setFrom = e => {
+    const r = bar.getBoundingClientRect();
+    SETTINGS.volume = Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * 20) / 20;
+    if (!SETTINGS.sound) SETTINGS.sound = true;
+    applyVolume();
+    renderSettings();
+  };
+  bar.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    try {
+      bar.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    unlockAudio();
+    setFrom(e);
+  });
+  bar.addEventListener('pointermove', e => {
+    if (e.buttons) setFrom(e);
+  });
+  bar.addEventListener('pointerup', () => {
+    saveSettings();
+    tone(660, 0.08); // 바뀐 크기로 짧게 들려준다
+  });
+}
+renderSettings();

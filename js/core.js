@@ -25,6 +25,50 @@ const CFG = {
   stealBase: 0.12, // (지금은 쓰지 않음)
   extraBase: 0.5, // (지금은 쓰지 않음)
 };
+// 기기에 기억하는 설정 이름
+const SETTINGS_KEY = 'nb3_settings';
+// 기억해 둔 설정을 읽는다(저장이 안 되는 환경이면 빈 설정)
+function loadSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+// 설정을 기기에 기억한다(못 하면 그냥 넘어간다)
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
+  } catch (e) {}
+}
+// 타이틀 화면에서 고르는 경기 설정
+const SETTINGS = Object.assign(
+  {
+    level: 'pro', // 난이도: 'rookie' 루키, 'pro' 프로
+    innings: 9, // 한 경기 이닝 수(3, 6, 9). 시즌은 항상 9회
+    tod: 'auto', // 시간: 'auto' 이닝 따라 바뀜, 'day' 낮, 'evening' 저녁, 'night' 밤
+    sound: true, // 소리 켜기/끄기
+    volume: 0.8, // 음량(0~1)
+  },
+  loadSettings(),
+);
+// 난이도 설정표
+const LEVELS = {
+  rookie: {
+    pitchSpeed: 0.85, // 내가 칠 때 공 속도 배율(0.85 = 15% 느리게)
+    swingWindow: 1.35, // 스윙 판정 시간 폭 배율(클수록 빠르거나 늦어도 맞음)
+    lateWindow: 0.09, // 공이 지나간 뒤에도 스윙이 인정되는 시간(초)
+    aiTimingError: 1.6, // 컴퓨터 타자 타이밍 오차 배율(클수록 못 침)
+    aiQuality: -0.12, // 컴퓨터 타자 타구 질 보정(음수면 약한 타구)
+  },
+  pro: { pitchSpeed: 1, swingWindow: 1, lateWindow: 0, aiTimingError: 1, aiQuality: 0 },
+};
+// 지금 난이도 설정
+const level = () => LEVELS[SETTINGS.level] || LEVELS.pro;
+// 시간 설정 → 시간대 번호(0 낮, 1 저녁, 2 밤, 3 노을)
+const TOD_INDEX = { day: 0, evening: 1, night: 2 };
+// 타이틀 화면에서 보여줄 시간대(자동이면 노을)
+const titleTod = () => (SETTINGS.tod in TOD_INDEX ? TOD_INDEX[SETTINGS.tod] : 3);
 // 경기 이닝 수(동점이면 연장으로 늘어남)
 let totalInnings = 9;
 // 스트라이크존 가로 반폭(m)

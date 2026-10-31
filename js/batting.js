@@ -20,7 +20,8 @@ const batterContact = () => {
 };
 // 스윙 타이밍과 공 위치로 타구 결과를 정하고 공을 날린다
 function resolveSwing() {
-  const d = (now - (pitch.t0 + pitch.t.d)) / 1000,
+  // 타이밍 차이(초). 루키는 판정 폭을 넓히려고 차이를 줄여서 본다(컴퓨터 타자는 그대로)
+  const d = (now - (pitch.t0 + pitch.t.d)) / 1000 / (pitcherMode ? 1 : level().swingWindow),
     ad = Math.abs(d),
     off = Math.hypot(pitch.xT / ZONE_HALF_W, (pitch.yT - 0.8) / 0.3);
   if (
@@ -42,7 +43,8 @@ function resolveSwing() {
         gb +
         (swingMode === 'c' ? 0.03 : 0) +
         randRange(-0.08, 0.08) -
-        (pitch.warp ? 0.14 : 0),
+        (pitch.warp ? 0.14 : 0) +
+        (pitcherMode ? level().aiQuality : 0),
       0,
       1,
     );
