@@ -86,6 +86,9 @@ function newLeague(my, len) {
   gameOuts = {};
   initFunds();
   initMarket();
+  league.season = 1;
+  startDraft(1, GROWTH.foundingRookies, 'F'); // 창단 드래프트(팀마다 신인 1명)
+  [...league.rosters[my].batters, ...league.rosters[my].pitchers].forEach(x => (ensureRec(x).v0 = playerCard(x).value)); // 입단 때 몸값
 }
 function saveLeague() {
   if (!league) return;
@@ -167,7 +170,7 @@ function exitLeague() {
   league = null;
   isSeason = false;
   cpuStaff = null;
-  ['leagueHub', 'leagueSetup', 'schedule', 'ledger', 'market'].forEach(id => ($(id).style.display = 'none'));
+  ['leagueHub', 'leagueSetup', 'schedule', 'ledger', 'market', 'draft', 'train'].forEach(id => ($(id).style.display = 'none'));
 }
 
 // ---------- 오늘 경기 ----------
@@ -222,6 +225,7 @@ function leagueApplyMatch() {
 function playMyGame() {
   const m = todayMatch();
   if (!m) return;
+  finishDraftAuto();
   $('leagueHub').style.display = 'none';
   isSeason = true;
   startGame(m.myHome, true); // 내가 홈이면 초에 수비부터
@@ -279,7 +283,10 @@ function simStats(code, starter, rf, ra) {
     hrs = Math.min(hits, Math.round(rf * 0.12 + rand() * 0.7)),
     conW = bats.map(p => (p[3] || 5) + 8),
     powW = bats.map(p => Math.pow(p[7] || 5, 2));
-  bats.forEach(p => (ssB(p).ab += 3 + (rand() < 0.6 ? 1 : 0) + (rand() < 0.15 ? 1 : 0)));
+  bats.forEach(p => {
+    ssB(p).ab += 3 + (rand() < 0.6 ? 1 : 0) + (rand() < 0.15 ? 1 : 0);
+    gainExp(p, GROWTH.simBatExp); // 출전 경험치
+  });
   for (let i = 0; i < hits; i++) {
     const x = ssB(bats[pick(conW)]);
     x.h++;
@@ -316,6 +323,7 @@ function simStats(code, starter, rf, ra) {
     erLeft -= er;
     x.g++;
     x.outs += o;
+    gainExp(P, o * GROWTH.expPerOut);
     x.er += Math.max(0, er);
     x.k += Math.round((o / 3) * (0.45 + playerCard(P).ovr / 200) * (0.7 + rand() * 0.6)); // 9이닝당 7개 안팎
   });
@@ -382,7 +390,10 @@ function finishMyMatch(myR, oppR, played) {
     league.yday = [r, ...others];
     league.day++;
     if (league.day >= league.sched.length) startPost();
-    else if (league.sched[league.day][0][2] === 1) cpuMarketMoves(); // 새 3연전 전에 컴퓨터 팀 이적
+    else if (league.sched[league.day][0][2] === 1) {
+      cpuMarketMoves(); // 새 3연전 전에 컴퓨터 팀 이적
+      midSeasonGrowth(); // 경험치가 쌓인 선수 능력치 +1 기회
+    }
   } else postGameDone(r);
   saveLeague();
 }
@@ -396,9 +407,22 @@ function leagueGameOver(myR, oppR) {
 function autoMyGame() {
   const m = todayMatch();
   if (!m) return;
+  finishDraftAuto();
   const r = simGame(m.h, m.a, league.phase === 'post');
   finishMyMatch(m.myHome ? r.hs : r.as, m.myHome ? r.as : r.hs);
   renderHub();
+}
+
+// 창단 드래프트를 안 하고 경기를 시작하면 남은 지명을 자동으로(내 차례는 스카우트 평가가 좋은 신인)
+function finishDraftAuto() {
+  if (league.phase !== 'reg' || draftDone()) return;
+  draftRunCpu();
+  while (draftTeam() === league.my) {
+    const best = league.draft.pool.reduce((a, id) => (league.extra[id].scoutStars > league.extra[a].scoutStars ? id : a));
+    draftPick(league.my, best);
+    draftRunCpu();
+  }
+  league.draft = null;
 }
 
 // ---------- 포스트시즌 ----------
@@ -492,8 +516,6 @@ function finishLeague() {
   seasonStats.rs = t.rs;
   seasonStats.ra = t.ra;
   leagueEnding = { champ: league.post.champ, awards: leagueAwards() };
-  league.finished = true;
-  clearLeagueSave();
   $('leagueHub').style.display = 'none';
   showHof(league.post.champ === league.my);
 }
@@ -540,6 +562,11 @@ function renderHub() {
         ? `<b>${POST_ROUNDS[s.r].label}</b>: ${teamName(s.hi)} ${s.wins[s.hi]} - ${s.wins[s.lo]} ${teamName(s.lo)}<br>내 팀은 이 시리즈에 나가지 않아요`
         : '';
   } else if (league.phase === 'over') next = `<b>🏆 ${teamName(league.post.champ)} 한국시리즈 우승!</b>`;
+  else if (league.phase === 'stove')
+    next =
+      `<b>스토브리그</b> · ${league.season}번째 시즌이 끝났어요<br>` +
+      (draftDone() ? '신인 드래프트 끝 · 이적 시장(FA)을 둘러보고 다음 시즌을 시작하세요' : '신인 드래프트를 하세요(순위 역순 3라운드)') +
+      (league.report && league.report.length ? `<div class="lg-report">${league.report.slice(0, 12).join('<br>')}</div>` : '');
   $('lgNext').innerHTML = next;
   // 순위표
   const lead = ranks[0];
@@ -578,6 +605,11 @@ function renderHub() {
   $('lgAuto').style.display = mine ? '' : 'none';
   $('lgPostNext').style.display = postOther ? '' : 'none';
   $('lgEnd').style.display = league.phase === 'over' ? '' : 'none';
+  const draftOpen = league.draft && !draftDone() && (league.phase === 'stove' || (league.phase === 'reg' && league.day === 0));
+  $('lgDraft').style.display = draftOpen ? '' : 'none';
+  $('lgDraft').textContent = league.phase === 'stove' ? '🎓 신인 드래프트' : '🎓 창단 드래프트';
+  $('lgNextSeason').style.display = league.phase === 'stove' ? '' : 'none';
+  $('lgTrain').style.display = league.phase === 'reg' ? '' : 'none';
 }
 // 내 팀 일정 화면
 function renderSchedule() {
@@ -684,6 +716,14 @@ onTap('lgLedger', () => {
 });
 onTap('ldClose', () => ($('ledger').style.display = 'none'));
 onTap('lgMarket', () => openMarket());
+onTap('lgDraft', () => openDraft());
+onTap('lgTrain', () => openTrain());
+onTap('lgNextSeason', () => {
+  const why = startNextSeason();
+  league.msg = why || league.msg;
+  enterLeagueTeam();
+  renderHub();
+});
 onTap('lgSched', () => {
   renderSchedule();
   $('schedule').style.display = 'block';

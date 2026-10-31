@@ -121,6 +121,7 @@ function ssBat(k) {
   if (!p) return;
   const x = ssB(p);
   ssAtBat = { x, P: activePitcher() };
+  if (league) gainExp(p, GROWTH.expPerPA); // 타석 경험치
   if (['1b', '2b', '3b', 'hr', 'bh'].includes(k)) {
     x.ab++;
     x.h++;
@@ -137,6 +138,7 @@ function ssK() {
   const p = LINEUPS[pitcherMode ? 'o' : 'm'][curBatter()];
   if (p) ssB(p).ab++;
   ssP(activePitcher()).k++;
+  if (league && p) gainExp(p, GROWTH.expPerPA);
   if (pitcherMode) leagueHighlight('k'); // 내 투수가 삼진
 }
 // 이번 경기 투수별 잡은 아웃(승·패·세이브를 정할 때)
@@ -146,6 +148,7 @@ function ssOuts(n) {
   if (!isSeason || !twoWay) return;
   const P = activePitcher();
   ssP(P).outs += n;
+  if (league) gainExp(P, n * GROWTH.expPerOut); // 아웃 경험치
   gameOuts[P.id] = (gameOuts[P.id] || 0) + n;
 }
 // 반 이닝에 낸 점수를 지금 마운드 투수의 자책점으로
@@ -222,6 +225,7 @@ ${leagueEnding ? `<h3>🏅 리그 타이틀</h3><div class="card">${leagueEnding
      .map(x => `<div class="card"><b>${x[1]}</b><br>${x[0]} 헌액</div>`)
      .join('') || '<div class="card">이번 시즌 헌액자 없음</div>'
  }
+ ${league && league.retired && league.retired.length ? `<h3>👋 은퇴 선수</h3><div class="card">${league.retired.slice(-15).reverse().map(r => `${r.season}시즌 뒤 <b>${r.n}</b> (${r.team}, ${r.age}세, OVR ${r.ovr})`).join('<br>')}</div>` : ''}
  <h3>통산 기록</h3><div class="card">시즌 ${H.s}회 · 우승 ${H.t}회 · 통산 ${H.w}승</div>
  <h3 style="margin-top:46px">Thank you for playing</h3><p style="color:#9fb0e8">나이트 베이스볼 3D</p>`;
   const hf = $('hof'),
@@ -247,8 +251,12 @@ $('hof-next').addEventListener('pointerdown', e => {
   $('hof').style.display = 'none';
   // 리그 시즌이 끝났으면 타이틀로
   if (leagueEnding) {
+    // 리그 시즌이 끝났으면 스토브리그로(나이·성장·은퇴 → 드래프트 → FA → 다음 시즌)
     leagueEnding = null;
-    backToTitle();
+    if (league) {
+      startOffseason();
+      showHub();
+    } else backToTitle();
     return;
   }
   $('end').style.display = 'flex';
