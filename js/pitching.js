@@ -163,6 +163,17 @@ function addTrail(q) {
 function cpuPitcherTick() {
   if (pitcherMode || derby) return;
   cpuStamina = Math.max(0, cpuStamina - randRange(1, 1.7));
+  if (cpuStaff) {
+    // 시즌: 상대 팀 자기 투수진에서 교체
+    if (cpuStamina < 20 && cpuStaff.length > 1) {
+      const o = cpuStaff[cpuIdx].n;
+      cpuIdx = (cpuIdx + 1) % cpuStaff.length;
+      setMound(cpuStaff[cpuIdx]);
+      cpuStamina = 100;
+      setTimeout(() => showBanner('투수 교체', o + ' → ' + cpuStaff[cpuIdx].n + ' 등판', false), 600);
+    }
+    return;
+  }
   if (cpuStamina < 20 && PITCHERS.length > 1) {
     const o = PITCHERS[curPitcher].n;
     selectPitcher((curPitcher + 1) % PITCHERS.length, false);
@@ -495,21 +506,8 @@ function balk() {
 function selectPitcher(i, mid) {
   curPitcher = i;
   const P = PITCHERS[i];
-  {
-    const nh = P.hand === 'L',
-      np = nh ? pitcherRigL : pitcherRigR;
-    pitcherLefty = nh;
-    if (np !== pitcherRig) {
-      pitcherRig.root.visible = false;
-      pitcherRig = np;
-      pitcherRoot = pitcherRig.root;
-      pitcherRoot.visible = !pitcherMode;
-    }
-  }
-  armSlot = ARM_SLOTS[P.slot];
-  pitchTypes = P.ars;
-  selPitch = 0;
-  pitcherCam.y = P.cy;
+  // 시즌에서 상대 팀이 던지는 중이면 마운드는 그대로(내 투수는 다음 수비 때 오른다)
+  if (pitcherMode || !cpuStaff) setMound(P);
   if (pitcherMode) {
     myStamina = 100;
     if (phase === 'aim') camera.position.copy(pitcherCam);
@@ -520,4 +518,33 @@ function selectPitcher(i, mid) {
     showBanner(P.n + ' 등판', P.s, true);
     pitcherAnim(0, 0);
   }
+}
+// 마운드에 투수 P를 올린다(좌우 모델, 투구폼, 구종, 투수 시점 카메라 높이)
+function setMound(P) {
+  moundPitcher = P;
+  const nh = P.hand === 'L',
+    np = nh ? pitcherRigL : pitcherRigR;
+  pitcherLefty = nh;
+  if (np !== pitcherRig) {
+    pitcherRig.root.visible = false;
+    pitcherRig = np;
+    pitcherRoot = pitcherRig.root;
+    pitcherRoot.visible = !pitcherMode;
+  }
+  armSlot = ARM_SLOTS[P.slot];
+  pitchTypes = P.ars;
+  selPitch = 0;
+  pitcherCam.y = P.cy;
+}
+// 시즌 상대 팀 투수진(null이면 예전처럼 양 팀이 PITCHERS를 같이 씀)과 지금 던지는 상대 투수 번호
+let cpuStaff = null;
+let cpuIdx = 0;
+// 지금 마운드에 있어야 할 투수
+const activePitcher = () => (!pitcherMode && cpuStaff ? cpuStaff[cpuIdx] : PITCHERS[curPitcher]);
+// 지금 마운드에 올라 있는 투수
+let moundPitcher = PITCHERS[0];
+// 공수가 바뀌었으면 마운드 투수를 바꾼다(다음 투구 전에)
+function syncMound() {
+  const P = activePitcher();
+  if (P && P !== moundPitcher) setMound(P);
 }

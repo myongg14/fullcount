@@ -60,3 +60,22 @@ const TEAM_COLORS = {
   m: [0xc8102e, 0xc8102e, 0xeceadf, 'TIGERS', '#fff'],
   o: [0x14235a, 0x14235a, 0xdedbd0, 'BEARS', '#fff'],
 };
+// 내 팀 후보 타자 3명: [이름, 포지션, 주력, 컨택, 좌우타]
+const MY_BENCH_DATA = [
+  ['윤도현', 'C', 3, 5, 'R'],
+  ['박민재', '2B', 7, 5, 'L'],
+  ['정우람', 'LF', 6, 6, 'R'],
+];
+// 시즌 상대 팀마다 강점(선수 능력치에 더하는 값). SEASON_OPPS와 같은 순서
+// spd: 주력, con: 컨택, cmd: 투수 제구(0.01 단위), velo: 투수 구속(km/h)
+const OPP_STYLE = [
+  { tag: '발 빠른 팀', spd: 2, con: 0, cmd: 0, velo: 0 },
+  { tag: '정교한 타선', spd: 0, con: 2, cmd: 0, velo: 0 },
+  { tag: '강속구 투수진', spd: 0, con: 0, cmd: -2, velo: 5 },
+  { tag: '균형 잡힌 팀', spd: 1, con: 1, cmd: 2, velo: 1 },
+  { tag: '제구파 투수진', spd: 0, con: 0, cmd: 8, velo: -2 },
+  { tag: '전통의 강타선', spd: -1, con: 2, cmd: 0, velo: 2 },
+  { tag: '기동력 야구', spd: 2, con: 1, cmd: -2, velo: 0 },
+  { tag: '젊은 투수진', spd: 0, con: -1, cmd: 3, velo: 4 },
+  { tag: '끈질긴 타선', spd: 1, con: 2, cmd: -3, velo: 0 },
+];

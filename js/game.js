@@ -178,7 +178,10 @@ function rallyCheck() {
 }
 // 다음 투구를 준비한다(컴퓨터 투구 결정, 화면 정리)
 function nextPitch() {
-  if (isSeason && pitcherMode) seasonStats.gp[curPitcher]++;
+  if (isSeason && pitcherMode) {
+    const id = PITCHERS[curPitcher].id;
+    seasonStats.gp[id] = (seasonStats.gp[id] || 0) + 1;
+  }
   if (derby) {
     if (derbyPitches >= 10) {
       endDerby();
@@ -192,6 +195,7 @@ function nextPitch() {
     bases = [0, 0, 0];
   }
   buntReq = false;
+  syncMound();
   cpuPitcherTick();
   rallyCheck();
   setTimeOfDay(SETTINGS.tod in TOD_INDEX ? TOD_INDEX[SETTINGS.tod] : timeOfDayFor());
@@ -222,7 +226,7 @@ function nextPitch() {
     }
   }
   {
-    const sg = (1 - (PITCHERS[curPitcher].cmd || 0.6)) * 0.45 * (pitcherMode ? 1 : 1 + (100 - cpuStamina) / 80),
+    const sg = (1 - (activePitcher().cmd || 0.6)) * 0.45 * (pitcherMode ? 1 : 1 + (100 - cpuStamina) / 80),
       nz = () => rand() + rand() + rand() - 1.5;
     x += nz() * sg;
     y += nz() * sg * 0.8;
@@ -642,7 +646,9 @@ function backToTitle() {
   // 화면 정리
   aimPointer = null;
   aimEl.style.display = 'none';
-  ['hud', 'end', 'season-modal', 'hof', 'replay-tag'].forEach(id => ($(id).style.display = 'none'));
+  ['hud', 'end', 'season-modal', 'hof', 'replay-tag', 'market', 'lineup', 'choice', 'teamEdit'].forEach(
+    id => ($(id).style.display = 'none'),
+  );
   windEl.style.display = 'none';
   $('info').textContent = '';
   $('hint').textContent = '';
