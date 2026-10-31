@@ -1,5 +1,25 @@
 // 투구: 투수 데이터와 구종, 공 궤적, 컴퓨터 투수 체력, 투수 시점 조준·세기 막대, 견제·보크, 컴퓨터 타자 스윙, 투수 교체
 
+// 링 제구 설정표: 조준하는 동안 노란 링이 줄었다 커졌다 반복, 흰 링과 겹칠 때 손을 떼면 완벽한 릴리스
+const RING_TUNING = {
+  enabled: true, // false면 링 없이 예전처럼(세기·체력에 따른 오차만)
+  whiteR: 22, // 흰 링(목표) 반지름(px)
+  minR: 8, // 노란 링 가장 작을 때 반지름(px)
+  maxR: 62, // 노란 링 가장 클 때 반지름(px)
+  period: 1100, // 노란 링이 한 번 줄었다 커지는 시간(ms)
+  staminaSpeed: 0.8, // 체력이 0이면 링이 이만큼 더 빨라짐(0.8 = 1.8배)
+  powerSpeed: 0.5, // 세기 막대가 최대면 이만큼 더 빨라짐
+  perfectWindow: 0.1, // 완벽 판정 폭(노란 링 크기 범위에 대한 비율)
+  goodMul: 2.6, // 좋은 릴리스 판정 폭 = 완벽 폭 × 이 값
+  edgeRange: 0.1, // 존 테두리에서 이 거리(m) 안을 노리면 '테두리 근처'
+  edgeShrink: 0.55, // 테두리를 노릴 때 판정 폭이 줄어드는 비율(최대)
+  perfectErr: 0.2, // 완벽한 릴리스: 원래 오차의 이 배율만큼만 빗나감
+  goodErr: 1.0, // 좋은 릴리스: 원래 오차 그대로
+  badErr: 2.2, // 실투: 원래 오차의 이 배율
+  hangChance: 0.45, // 실투가 가운데로 몰릴 확률
+  hangPull: 0.35, // 가운데로 몰릴 때 남는 거리 비율(작을수록 한가운데)
+};
+
 // 전광판·화면에 보이는 구속 배율(공이 오는 속도는 그대로)
 const SPEED_DISPLAY_SCALE = 1.05;
 // 구종 정보를 만든다(k: 종류, n: 이름, d: 비행 시간, v: 구속 범위)
@@ -187,13 +207,73 @@ document.body.appendChild(aimEl);
 let aimPointer = null;
 // 터치 위치(손가락에 가리지 않게 조금 위로)
 const aimXY = e => [e.clientX, e.clientY - (e.pointerType === 'touch' ? 56 : 0)];
+// 노란 링(줄었다 커졌다 반복)
+const ringEl = document.createElement('i');
+ringEl.id = 'ringY';
+aimEl.appendChild(ringEl);
+// 조준을 시작한 시각(링 애니메이션 기준)과 지금 노리는 곳이 테두리에 얼마나 가까운지(0~1)
+let ringT0 = 0;
+let aimEdge = 0;
 // 조준점 표시를 손가락 위치로 옮긴다
 function aimMove(e) {
   const q = aimXY(e);
   aimEl.style.display = 'block';
   aimEl.style.left = q[0] + 'px';
   aimEl.style.top = q[1] + 'px';
+  aimEdge = edgeness(screenToZone(q[0], q[1]));
+  // 테두리 근처를 노리면 흰 링이 주황색(맞는 구간이 좁아짐)
+  aimEl.classList.toggle('edge', RING_TUNING.enabled && aimEdge > 0.5);
 }
+// 화면 위치(px) → 홈플레이트 위 존 평면의 위치(m)
+function screenToZone(px, py) {
+  const W = innerWidth,
+    H = innerHeight,
+    P = (x, y) => {
+      const v = new THREE.Vector3(x, y, 0).project(camera);
+      return [((v.x + 1) / 2) * W, ((1 - v.y) / 2) * H];
+    },
+    a = P(-ZONE_HALF_W, ZONE_TOP),
+    c = P(ZONE_HALF_W, ZONE_BOTTOM);
+  return {
+    x: -ZONE_HALF_W + ((px - a[0]) / (c[0] - a[0])) * 2 * ZONE_HALF_W,
+    y: ZONE_TOP - ((py - a[1]) / (c[1] - a[1])) * (ZONE_TOP - ZONE_BOTTOM),
+  };
+}
+// 노리는 곳이 존 테두리에 얼마나 가까운지(1 = 테두리 위, 0 = 멀다)
+function edgeness(p) {
+  const ax = Math.abs(p.x),
+    inside = ax <= ZONE_HALF_W && p.y >= ZONE_BOTTOM && p.y <= ZONE_TOP,
+    dist = inside
+      ? Math.min(ZONE_HALF_W - ax, p.y - ZONE_BOTTOM, ZONE_TOP - p.y)
+      : Math.hypot(Math.max(0, ax - ZONE_HALF_W), Math.max(0, ZONE_BOTTOM - p.y, p.y - ZONE_TOP));
+  return clamp(1 - dist / RING_TUNING.edgeRange, 0, 1);
+}
+// 지금 노란 링 반지름(px): 크게 시작해서 줄었다 커지기를 반복. 체력이 낮거나 세기가 셀수록 빠르다
+function ringRadius() {
+  const R = RING_TUNING,
+    speed = 1 + R.staminaSpeed * (1 - myStamina / 100) + R.powerSpeed * ((pitchPower - 0.5) / 0.5),
+    ph = (((now - ringT0) * speed) / R.period) * Math.PI * 2;
+  return R.minR + (R.maxR - R.minR) * (0.5 + 0.5 * Math.cos(ph));
+}
+// 매 프레임: 조준 중이면 노란 링 크기를 바꾼다
+function updateRing() {
+  if (!RING_TUNING.enabled || aimPointer == null) {
+    ringEl.style.display = 'none';
+    return;
+  }
+  const r = ringRadius();
+  ringEl.style.display = 'block';
+  ringEl.style.width = ringEl.style.height = 2 * r + 'px';
+  ringEl.style.margin = -r + 'px 0 0 ' + -r + 'px';
+}
+// 손을 뗀 순간 링 판정: 'perfect' 완벽한 릴리스, 'good' 좋은 릴리스, 'bad' 실투
+function ringGrade() {
+  const R = RING_TUNING,
+    m = Math.abs(ringRadius() - R.whiteR) / (R.maxR - R.minR),
+    w = R.perfectWindow * (1 - R.edgeShrink * aimEdge);
+  return m <= w ? 'perfect' : m <= w * R.goodMul ? 'good' : 'bad';
+}
+const RELEASE_TEXT = { perfect: '완벽한 릴리스!', good: '좋은 릴리스', bad: '실투!' };
 // 내 투수 체력(0~100)
 let myStamina = 100;
 // 투구 세기(0.5~1, 막대로 조절)
@@ -339,16 +419,12 @@ function aiSwing() {
 }
 // 조준한 화면 위치로 투구를 정한다(세기·체력에 따른 오차 포함)
 function aimTap(px, py) {
-  const W = innerWidth,
-    H = innerHeight,
-    P = (x, y) => {
-      const v = new THREE.Vector3(x, y, 0).project(camera);
-      return [((v.x + 1) / 2) * W, ((1 - v.y) / 2) * H];
-    },
-    a = P(-ZONE_HALF_W, ZONE_TOP),
-    c = P(ZONE_HALF_W, ZONE_BOTTOM);
-  let x = -ZONE_HALF_W + ((px - a[0]) / (c[0] - a[0])) * 2 * ZONE_HALF_W,
-    y = ZONE_TOP - ((py - a[1]) / (c[1] - a[1])) * (ZONE_TOP - ZONE_BOTTOM);
+  const aimAt = screenToZone(px, py);
+  let x = aimAt.x,
+    y = aimAt.y;
+  aimEdge = edgeness(aimAt);
+  const grade = RING_TUNING.enabled ? ringGrade() : null,
+    errMul = grade ? RING_TUNING[grade + 'Err'] : 1;
   const t = Object.assign({}, pitchTypes[selPitch]),
     e = pitchPower * (0.7 + (0.3 * myStamina) / 100),
     j =
@@ -356,8 +432,13 @@ function aimTap(px, py) {
       (0.75 + 0.9 * (e - 0.5) + (1 - myStamina / 100) * 0.6);
   t.d = Math.round(t.d * (1.27 - 0.34 * e) * 0.93);
   myStamina = Math.max(0, myStamina - (1.2 + 2.6 * pitchPower) * 0.65);
-  x = clamp(x, -0.8, 0.8) + randRange(-j, j);
-  y = clamp(y, 0.15, 1.7) + randRange(-j, j) * 0.8;
+  x = clamp(x, -0.8, 0.8) + randRange(-j, j) * errMul;
+  y = clamp(y, 0.15, 1.7) + randRange(-j, j) * 0.8 * errMul;
+  // 실투는 가운데로 몰리기도 한다
+  if (grade === 'bad' && rand() < RING_TUNING.hangChance) {
+    x *= RING_TUNING.hangPull;
+    y = 0.8 + (y - 0.8) * RING_TUNING.hangPull;
+  }
   Object.assign(pitch, {
     t,
     xT: x,
@@ -365,10 +446,12 @@ function aimTap(px, py) {
     kmh: Math.round(randRange(t.v[0], t.v[1]) * (0.88 + 0.14 * e)),
     side: rand() < 0.5 ? -1 : 1,
     t0: 0,
+    release: grade ? RELEASE_TEXT[grade] : '',
   });
   phase = 'windup';
   phaseStart = now;
-  $('hint').textContent = bases.some(x => x) ? '투구 중 견제하면 보크!' : '';
+  $('hint').textContent =
+    (grade ? RELEASE_TEXT[grade] : '') + (bases.some(x => x) ? (grade ? ' · ' : '') + '투구 중 견제하면 보크!' : '');
   $('info').textContent = '';
   stealReq = cpuStealPlan && stealer() >= 0;
 }

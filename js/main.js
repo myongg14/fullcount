@@ -50,6 +50,7 @@ gameCanvas.addEventListener('pointerdown', e => {
   if (pitcherMode && phase === 'aim') {
     unlockAudio();
     aimPointer = e.pointerId;
+    ringT0 = now; // 노란 링은 크게 시작
     try {
       gameCanvas.setPointerCapture(e.pointerId);
     } catch (_) {}
@@ -102,6 +103,7 @@ addEventListener('keydown', e => {
 });
 // 경기 한 프레임 처리(투구, 스윙, 타구, 카메라)
 function update(dt) {
+  updateRing();
   frameDt = dt;
   batSide = curHand();
   if (isReplay) replayBall();
@@ -150,6 +152,7 @@ function update(dt) {
       if (pitcherMode) aiSwing();
       $('info').textContent =
         `${pitch.t.n} ${Math.round(pitch.kmh * SPEED_DISPLAY_SCALE)}km/h` +
+        (pitcherMode && pitch.release ? ' · ' + pitch.release : '') +
         (pitcherMode ? '' : ` · 투수체력 ${Math.round(cpuStamina)}%`) +
         (!pitcherMode && (infieldShift || outfieldShift)
           ? ` · 시프트${infieldShift ? ' 내야' : ''}${outfieldShift ? ' 외야' : ''}`
