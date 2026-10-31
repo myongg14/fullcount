@@ -22,6 +22,11 @@ const FIELD_TUNING = {
   cpuTag3: 0.6, // 컴퓨터 3루 주자가 태그업할 확률
   cpuTag2: 0.4, // 컴퓨터 2루 주자가 태그업할 확률
 };
+// 수비하는 팀의 평균 수비(KBO 데이터)에 따른 수비 범위 배율(±5% 안쪽). 수비 값이 없으면 1
+function fieldDefFactor() {
+  const rows = LINEUPS[pitcherMode ? 'm' : 'o'].filter(p => p[8] != null);
+  return rows.length ? attrFactor(rows.reduce((s, p) => s + p[8], 0) / rows.length) : 1;
+}
 // 캐치 링 상태(null = 없음)와 송구 고르기 상태(null = 없음)
 let catchRing = null;
 let throwChoice = null;
@@ -33,7 +38,7 @@ function groundPlay(th, q) {
   const a = (th * Math.PI) / 180,
     dx = Math.sin(a),
     dz = -Math.cos(a),
-    reach = clamp(5.2 - 2.2 * q, 2.8, 5.2);
+    reach = clamp(5.2 - 2.2 * q, 2.8, 5.2) * fieldDefFactor();
   let bi = -1,
     bs = 9;
   fielders.forEach((f, i) => {
@@ -82,7 +87,7 @@ const flyCatchable = (D, th) => {
     bd = Math.min(bd, f.h.distanceTo(L));
   });
   const air = 0.4138 * Math.sqrt(Dm);
-  return bd <= 9 * air * 0.92;
+  return bd <= 9 * air * 0.92 * fieldDefFactor();
 };
 // 수비수를 목표 지점으로 달리게 한다
 function moveFielder(f, tx, tz, sp, dt) {

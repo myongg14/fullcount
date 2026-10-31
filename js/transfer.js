@@ -6,8 +6,8 @@ const TRADE_TUNING = {
   closeAfter: 7, // 이 경기를 마친 뒤부터 이적 마감(8경기째부터)
   acceptRatio: 0.95, // 주는 몸값이 받는 몸값의 이 비율 이상이면 수락
   closeRatio: 0.8, // 이 비율 이상이면 '조금 더 필요해요'
-  maxBatters: 14, // 한 팀 최대 타자 수
-  maxPitchers: 8, // 한 팀 최대 투수 수
+  maxBatters: 16, // 한 팀 최대 타자 수
+  maxPitchers: 12, // 한 팀 최대 투수 수
   minBatters: 9, // 한 팀 최소 타자 수(타순 9명)
   minPitchers: 3, // 한 팀 최소 투수 수
 };
@@ -48,7 +48,11 @@ function seededRand(seed) {
 }
 const SURNAMES = '김이박최정강조윤장임한오서신권황안송류홍전고문양손배백허유남심노하곽성차주우구민진'.split('');
 const GIVEN = '민준서도현우지훈성재영호진수태윤석경동찬규원상혁기철승용준희범광일선태한결빈웅'.split('');
-const usedNames = new Set([...LINEUPS.m, ...LINEUPS.o, ...MY_BENCH].map(p => p[0]).concat(PITCHERS.map(P => P.n)));
+const usedNames = new Set(
+  [...LINEUPS.m, ...LINEUPS.o, ...MY_BENCH]
+    .map(p => p[0])
+    .concat(PITCHERS.map(P => P.n), Object.values(KBO_PLAYERS).map(p => p.name0)),
+);
 // 겹치지 않는 가상의 이름
 function makeName(r) {
   for (;;) {
@@ -98,18 +102,15 @@ function makePitcher(r, id, st, boost) {
     ars,
   };
 }
-// 시즌 상대 팀 9개 선수단: 타자 12명(앞 9명이 타순), 투수 5명
+// 시즌 상대 팀(SEASON_OPPS 순서)의 KBO 팀 코드
+const oppCode = t => (KBO_TEAMS.find(k => k.name === SEASON_OPPS[t].n) || KBO_TEAMS[t + 1]).code;
+// 시즌 상대 팀 9개 선수단: kbo-data.js의 실제 KBO 선수(타자 14명: 앞 9명이 타순, 투수 10명: 앞 5명이 선발)
 function buildOppRosters() {
-  return SEASON_OPPS.map((o, t) => {
-    const r = seededRand(20261031 + t * 977),
-      st = OPP_STYLE[t];
-    return {
-      batters: BAT_POS.map((pos, k) => makeBatter(r, pos, `t${t}b${k}`, st, 0)),
-      pitchers: [0, 1, 2, 3, 4].map(k => makePitcher(r, `t${t}p${k}`, st, 0)),
-    };
-  });
-}
-// 자유계약(FA) 선수 4명: 어느 팀에도 없는 선수(능력이 조금 좋다)
+  return SEASON_OPPS.map((o, t) => ({
+    batters: kboBatters(oppCode(t)).map(kboBatterRow),
+    pitchers: kboPitchers(oppCode(t)).map(kboPitcherObj),
+  }));
+}// 자유계약(FA) 선수 4명: 어느 팀에도 없는 선수(능력이 조금 좋다)
 function buildFaPool() {
   const r = seededRand(77031),
     st = { spd: 0, con: 0, cmd: 0, velo: 0 };
@@ -125,7 +126,7 @@ let faUsed = false;
 // 지금 선수단 전체(저장용)
 function rosterState() {
   return {
-    v: 1,
+    v: 2, // 2: 상대 팀이 실제 KBO 선수단
     my: { lineup: LINEUPS.m, bench: MY_BENCH, pitchers: PITCHERS, cur: curPitcher },
     opp: OPP_ROSTERS,
     fa: FA_POOL,
@@ -135,12 +136,13 @@ function rosterState() {
 }
 // 저장해 둔 선수단을 게임에 반영한다
 function applyRosterState(s) {
-  if (!s || s.v !== 1 || !s.my || s.my.lineup.length < 9 || !s.my.pitchers.length) return;
+  if (!s || !(s.v === 1 || s.v === 2) || !s.my || s.my.lineup.length < 9 || !s.my.pitchers.length) return;
   LINEUPS.m = s.my.lineup;
   MY_BENCH = s.my.bench || [];
   PITCHERS.splice(0, PITCHERS.length, ...s.my.pitchers);
-  if (s.opp && s.opp.length === SEASON_OPPS.length) OPP_ROSTERS = s.opp;
-  if (s.fa) FA_POOL = s.fa;
+  // 예전(가상 선수) 저장의 상대 팀은 버리고 KBO 선수단으로
+  if (s.v === 2 && s.opp && s.opp.length === SEASON_OPPS.length) OPP_ROSTERS = s.opp;
+  if (s.v === 2 && s.fa) FA_POOL = s.fa;
   tradesUsed = s.used || 0;
   faUsed = !!s.faUsed;
   [...LINEUPS.m, ...MY_BENCH, ...OPP_ROSTERS.flatMap(t => t.batters), ...FA_POOL.filter(Array.isArray)].forEach(p =>
@@ -192,7 +194,9 @@ function applyOppRoster() {
     const t = OPP_ROSTERS[(seasonGame - 1) % OPP_ROSTERS.length];
     LINEUPS.o = t.batters.slice(0, 9);
     cpuStaff = t.pitchers;
-    cpuIdx = (seasonGame - 1) % cpuStaff.length; // 경기마다 선발이 돌아간다
+    // 선발 로테이션: 선발(SP) 투수들이 경기마다 차례로
+    const sp = cpuStaff.map((P, i) => i).filter(i => cpuStaff[i].role !== 'RP');
+    cpuIdx = sp.length ? sp[(seasonGame - 1) % sp.length] : (seasonGame - 1) % cpuStaff.length;
   } else {
     LINEUPS.o = ORIG_O;
     cpuStaff = null;
@@ -212,19 +216,8 @@ function applyOppRoster() {
 // ---------- 몸값 ----------
 const isBatter = x => Array.isArray(x);
 const topSpeed = P => Math.max(...P.ars.map(a => a.v[1]));
-// 몸값: 능력치 + 이번 시즌 기록(내 선수만 기록이 있다)
-function playerValue(x) {
-  if (isBatter(x)) {
-    const s = seasonStats.b[x[5]];
-    let v = x[3] * 12 + x[2] * 6;
-    if (s && s.ab >= 5) v += (s.h / s.ab - 0.25) * 150 + s.hr * 5;
-    return Math.max(10, Math.round(v));
-  }
-  const s = seasonStats.p[x.id];
-  let v = x.cmd * 120 + (topSpeed(x) - 120) * 1.5;
-  if (s) v += s.w * 6 + s.k * 0.5;
-  return Math.max(10, Math.round(v));
-}
+// 몸값(억 원): economy.js의 계산(OVR·나이·시즌 성적·포지션)
+const playerValue = x => playerCard(x).value;
 // 능력치 글자
 const abilityText = x =>
   isBatter(x)
@@ -352,7 +345,7 @@ const market = { team: 0, give: [], get: null, msg: '' };
 // 선수 한 줄
 function playerRow(x, on, mine) {
   return `<button class="pl${on ? ' on' : ''}" data-id="${idOf(x)}">
-    <b>${nameOf(x)}</b><span>${abilityText(x)}</span><span>${mine || (isBatter(x) ? seasonStats.b[x[5]] : seasonStats.p[x.id]) ? recordText(x) + ' · ' : ''}몸값 <i>${playerValue(x)}</i></span></button>`;
+    <b>${nameOf(x)}</b><span>${abilityText(x)}</span><span>OVR ${playerCard(x).ovr} · ${mine || (isBatter(x) ? seasonStats.b[x[5]] : seasonStats.p[x.id]) ? recordText(x) + ' · ' : ''}몸값 <i>${playerValue(x)}억</i></span></button>`;
 }
 // 이적 시장 그리기
 function renderMarket() {
@@ -367,14 +360,14 @@ function renderMarket() {
     : mine.map(x => playerRow(x, market.give.includes(x), true)).join('');
   const theirs = isFa ? FA_POOL : [...OPP_ROSTERS[market.team].batters, ...OPP_ROSTERS[market.team].pitchers];
   $('mkTheirs').innerHTML =
-    (isFa ? '' : `<p class="mk-note">${SEASON_OPPS[market.team].n} · ${OPP_STYLE[market.team].tag}</p>`) +
+    (isFa ? '' : `<p class="mk-note">${SEASON_OPPS[market.team].n} · 연고지 ${KBO_BY_CODE[oppCode(market.team)].city}</p>`) +
     (theirs.length ? theirs.map(x => playerRow(x, market.get === x, false)).join('') : '<p class="mk-note">남은 선수가 없어요</p>');
   const gv = market.give.reduce((s, x) => s + playerValue(x), 0);
   $('mkSum').textContent = isFa
     ? market.get
-      ? `${nameOf(market.get)} 영입 · 몸값 ${playerValue(market.get)}`
+      ? `${nameOf(market.get)} 영입 · 몸값 ${playerValue(market.get)}억`
       : 'FA 선수를 골라요'
-    : `주는 몸값 ${gv}${market.get ? ' · 받는 몸값 ' + playerValue(market.get) : ''}`;
+    : `주는 몸값 ${gv}억${market.get ? ' · 받는 몸값 ' + playerValue(market.get) + '억' : ''}`;
   $('mkGo').textContent = isFa ? '영입' : '제안';
   $('mkGo').disabled = !!closed;
   $('mkInfo').textContent = closed || `남은 이적 ${TRADE_TUNING.perSeason - tradesUsed}번${faUsed ? ' · FA 영입 완료' : ''}`;

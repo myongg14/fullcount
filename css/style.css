@@ -1316,3 +1316,20 @@ body.paused * {
 .sheet-box .te-btns button:disabled {
   opacity: 0.4;
 }
+
+/* 팀 편집: 선수 OVR·몸값 표시 */
+#teamEdit label em {
+  font-style: normal;
+  color: var(--gold);
+  margin-left: 4px;
+}
+#teamEdit label .virt {
+  color: #ff8a7a;
+}
+#teamEdit .tabs button {
+  min-width: 52px;
+  font-size: 15px;
+}
+#teKbo {
+  display: none;
+}

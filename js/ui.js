@@ -583,15 +583,21 @@ function openTeamEdit(t) {
     c => `<button data-c="${c}" style="background:${hexCss(c)}" class="${c === teColor ? 'on' : ''}" aria-label="팀 색"></button>`,
   ).join('');
   $('teBatters').innerHTML = [...LINEUPS.m, ...MY_BENCH]
-    .map((p, i) => `<label>${i < 9 ? i + 1 + '번' : '후보'} · ${p[1]}<input data-id="${p[5]}" maxlength="6" value="${p[0]}"></label>`)
+    .map(
+      (p, i) =>
+        `<label>${i < 9 ? i + 1 + '번' : '후보'} · ${p[1]}${cardTag(p)}<input data-id="${p[5]}" maxlength="6" value="${p[0]}"></label>`,
+    )
     .join('');
   $('tePitchers').innerHTML = PITCHERS.map(
-    P => `<label>${P.hand === 'L' ? '좌완' : '우완'} · ${P.s.split(' · ')[0]}<input data-id="${P.id}" maxlength="6" value="${P.n}"></label>`,
+    P => `<label>${P.hand === 'L' ? '좌완' : '우완'} · ${P.s.split(' · ')[0]}${cardTag(P)}<input data-id="${P.id}" maxlength="6" value="${P.n}"></label>`,
   ).join('');
+  teTab = 'mine';
+  renderTeTabs();
   $('teamEdit').style.display = 'block';
 }
 // 창의 입력값을 저장하고 반영한다
 function saveTeamEdit() {
+  saveKboNames();
   const t = loadTeam();
   t.name = cleanName($('teName').value, TEAM_DEFAULT.name, 8);
   t.color = teColor;
@@ -629,3 +635,57 @@ $('teReset').addEventListener('click', () => {
   openTeamEdit(d);
 });
 applyTeam(loadTeam());
+// ---------- 팀 편집: KBO 10개 팀 선수 보기·이름 고치기 ----------
+let teTab = 'mine';
+// 선수 옆 OVR·몸값 글자
+function cardTag(x) {
+  const c = playerCard(x);
+  return c ? ` <em>OVR ${c.ovr} · ${c.value}억</em>${c.virtual ? ' <em class="virt">가상</em>' : ''}` : '';
+}
+// 탭 버튼(내 팀 + KBO 10개 팀)
+function renderTeTabs() {
+  $('teTabs').innerHTML =
+    `<button data-t="mine" class="${teTab === 'mine' ? 'on' : ''}">내 팀</button>` +
+    KBO_TEAMS.map(t => `<button data-t="${t.code}" class="${teTab === t.code ? 'on' : ''}">${t.short}</button>`).join('');
+  $('teMine').style.display = teTab === 'mine' ? 'block' : 'none';
+  $('teKbo').style.display = teTab === 'mine' ? 'none' : 'block';
+  if (teTab !== 'mine') renderTeKbo(teTab);
+}
+// KBO 팀 선수 목록(이름 입력칸 + 나이·포지션·OVR·몸값)
+function renderTeKbo(code) {
+  const t = KBO_BY_CODE[code],
+    row = r =>
+      `<label>${r.type === 'B' ? r.pos : r.role === 'SP' ? '선발' : '불펜'} · ${r.age}세${cardTag(r)}<input data-kid="${r.id}" maxlength="6" value="${r.name}"></label>`;
+  $('teKboInfo').textContent = `${t.name} · 연고지 ${t.city} · 인기도 ${t.pop} · 타자 ${t.batters.length}명 · 투수 ${t.pitchers.length}명. 이름이 틀렸으면 고치고 저장하세요.`;
+  $('teKboBatters').innerHTML = kboBatters(code).map(row).join('');
+  $('teKboPitchers').innerHTML = kboPitchers(code).map(row).join('');
+}
+// KBO 선수 이름 고친 것을 저장하고 리그 전체(상대 팀 선수단)에 반영
+function saveKboNames() {
+  const els = document.querySelectorAll('#teKbo input[data-kid]');
+  if (!els.length) return;
+  const names = loadKboNames();
+  els.forEach(el => {
+    const r = KBO_PLAYERS[el.dataset.kid];
+    const n = cleanName(el.value, r.name0, 6);
+    r.name = n;
+    if (n === r.name0) delete names[r.id];
+    else names[r.id] = n;
+    // 지금 선수단(상대 팀·내 팀)에 있는 같은 선수 이름도 바꾼다
+    [...OPP_ROSTERS.flatMap(x => x.batters.concat(x.pitchers)), ...LINEUPS.o, ...myPlayers()].forEach(p => {
+      if (idOf(p) !== r.id) return;
+      if (isBatter(p)) p[0] = n;
+      else p.n = n;
+    });
+  });
+  try {
+    localStorage.setItem(KBO_NAME_KEY, JSON.stringify(names));
+  } catch (e) {}
+}
+$('teTabs').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (teTab !== 'mine') saveKboNames(); // 탭을 옮겨도 고친 이름은 남긴다
+  teTab = b.dataset.t;
+  renderTeTabs();
+});
