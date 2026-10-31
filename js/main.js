@@ -100,6 +100,7 @@ $('season-next').addEventListener('pointerdown', e => {
 });
 $('end').addEventListener('pointerdown', input);
 addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; // 이름을 입력하는 중에는 스윙하지 않음
   if (e.code === 'Space') {
     e.preventDefault();
     input();

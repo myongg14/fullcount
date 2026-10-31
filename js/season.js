@@ -34,8 +34,64 @@ function updateSeasonModal() {
     `<b>성적</b> ${seasonWins}승 ${seasonLosses}패${seasonDraws ? ' ' + seasonDraws + '무' : ''} (승률 ${(g ? seasonWins / g : 0).toFixed(3)})<br><b>다음 경기 ${seasonGame}/${SEASON_LEN}</b> · VS ${o.n}<br><span style="color:#9fb0e8;font-size:14px">${SEASON_LEN}경기 중 6승 이상이면 페넌트레이스 우승!</span>`;
   $('season-next').textContent = seasonGame === 1 ? '시즌 개막!' : '다음 경기 시작';
 }
-// 새 시즌을 시작하고 페넌트레이스 창을 연다
+// ---------- 시즌 저장(며칠에 걸쳐 하기) ----------
+const SEASON_KEY = 'nb3_season';
+// 시즌 진행(몇 번째 경기, 승패, 선수 기록)을 기기에 저장한다(못 하면 넘어간다)
+function saveSeason() {
+  try {
+    localStorage.setItem(
+      SEASON_KEY,
+      JSON.stringify({ game: seasonGame, w: seasonWins, l: seasonLosses, d: seasonDraws, last: seasonLast, stats: seasonStats }),
+    );
+  } catch (e) {}
+  renderSeasonButton();
+}
+// 저장된 시즌(없거나 깨졌으면 null)
+function loadSeasonSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SEASON_KEY));
+    return s && s.game >= 1 && s.game <= SEASON_LEN && s.stats && s.stats.b ? s : null;
+  } catch (e) {
+    return null;
+  }
+}
+function clearSeasonSave() {
+  try {
+    localStorage.removeItem(SEASON_KEY);
+  } catch (e) {}
+  renderSeasonButton();
+}
+// 저장된 시즌이 있으면 타이틀에 '시즌 이어하기' 버튼
+function renderSeasonButton() {
+  const s = loadSeasonSave();
+  $('btn-cont').style.display = s ? 'inline-block' : 'none';
+  if (s) $('btn-cont').textContent = `▶ 시즌 이어하기 (${s.game}/${SEASON_LEN}경기 · ${s.w}승 ${s.l}패)`;
+}
+// 저장된 시즌을 이어서 페넌트레이스 창을 연다
+function continueSeason() {
+  const s = loadSeasonSave();
+  if (!s) return;
+  ssReset();
+  // 저장 뒤 선수 수가 바뀌었어도 깨지지 않게 칸별로 옮긴다
+  s.stats.b.forEach((x, i) => seasonStats.b[i] && Object.assign(seasonStats.b[i], x));
+  (s.stats.p || []).forEach((x, i) => seasonStats.p[i] && Object.assign(seasonStats.p[i], x));
+  ['rs', 'ra', 'dv'].forEach(k => (seasonStats[k] = s.stats[k] || 0));
+  isSeason = true;
+  seasonGame = s.game;
+  seasonWins = s.w;
+  seasonLosses = s.l;
+  seasonDraws = s.d;
+  seasonLast = s.last || '';
+  $('title').style.display = 'none';
+  updateSeasonModal();
+  $('season-modal').style.display = 'flex';
+}
+// 새 시즌을 시작하고 페넌트레이스 창을 연다(저장된 시즌이 있으면 확인 후 지운다)
 function startSeasonModal() {
+  const saved = loadSeasonSave();
+  if (saved && !confirm(`저장된 시즌(${saved.game}경기째, ${saved.w}승 ${saved.l}패)이 있어요.\n새 시즌을 시작하면 지워져요. 새로 시작할까요?`))
+    return;
+  clearSeasonSave();
   ssReset();
   isSeason = true;
   seasonGame = 1;
@@ -43,6 +99,7 @@ function startSeasonModal() {
   seasonLosses = 0;
   seasonDraws = 0;
   seasonLast = '';
+  saveSeason();
   $('title').style.display = 'none';
   updateSeasonModal();
   $('season-modal').style.display = 'flex';
@@ -59,12 +116,14 @@ function seasonResult() {
   seasonGame++;
   if (seasonGame > SEASON_LEN) {
     isSeason = false;
+    clearSeasonSave(); // 시즌이 끝나면 저장 지우기
     $('fs').textContent = `${seasonWins}승 ${seasonLosses}패${seasonDraws ? ' ' + seasonDraws + '무' : ''}`;
     $('fd').textContent = seasonWins >= 6 ? '🏆 페넌트레이스 우승!' : '가을야구 진출 실패...';
     $('fb').textContent = '시즌 종료 · 마지막 경기 ' + seasonLast;
     showHof(seasonWins >= 6);
     return;
   }
+  saveSeason(); // 경기가 끝날 때마다 저장
   updateSeasonModal();
   $('season-modal').style.display = 'flex';
 }
@@ -212,3 +271,10 @@ $('hof-next').addEventListener('pointerdown', e => {
   $('hof').style.display = 'none';
   $('end').style.display = 'flex';
 });
+$('btn-cont').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  unlockAudio();
+  continueSeason();
+});
+renderSeasonButton();
