@@ -38,6 +38,33 @@ function unlockAudio() {
   } catch (e) {}
   startAmbient();
 }
+// iPad Safari는 손가락을 '뗄 때'(touchend·click)만 소리를 켜 준다.
+// 게임의 탭은 모두 손가락을 '댈 때'(pointerdown) 처리돼서, 그것만으로는 소리 장치가 잠긴 채 남아 소리가 안 났다.
+// 그래서 손을 뗄 때마다 소리 장치를 깨우고, 처음 한 번은 빈 소리를 틀어 잠금을 확실히 푼다.
+let gestureUnlocked = false;
+// 손을 뗄 때(또는 키를 누를 때) 소리 장치와 심판 목소리를 깨운다
+function unlockFromGesture() {
+  if (paused) return;
+  unlockAudio();
+  if (!audioCtx) return;
+  try {
+    if (audioCtx.state !== 'running') audioCtx.resume(); // iPad에서 다른 앱에 갔다 오면 'interrupted'가 되기도 한다
+  } catch (e) {}
+  if (gestureUnlocked) return;
+  gestureUnlocked = true;
+  try {
+    const b = audioCtx.createBuffer(1, 1, 22050),
+      s = audioCtx.createBufferSource();
+    s.buffer = b;
+    s.connect(audioCtx.destination);
+    s.start(0);
+  } catch (e) {}
+  speechReady = false; // 손을 댈 때 깨운 것은 iPad에서 무시되므로 여기서 다시 깨운다
+  unlockSpeech();
+}
+['touchend', 'pointerup', 'click', 'keydown'].forEach(t =>
+  addEventListener(t, unlockFromGesture, { capture: true, passive: true }),
+);
 // 관중 웅성거림 크기 조절기
 let ambientGain;
 // 관중 웅성거림 배경음을 튼다
