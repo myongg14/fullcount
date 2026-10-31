@@ -131,7 +131,7 @@ function updateControls() {
   if (pitcherMode && myStamina <= 30) $('sw').textContent = '🔥 불펜 투수 몸 풀기';
   let h = '';
   const g = $('pg'),
-    on = pitcherMode && phase !== 'title' && phase !== 'over';
+    on = pitcherMode && phase !== 'title' && phase !== 'over' && !throwChoice; // 송구 고를 땐 2루 버튼과 겹치지 않게 숨김
   g.style.display = on ? 'block' : 'none';
   if (on) {
     $('stf').style.width = myStamina + '%';

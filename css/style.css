@@ -934,3 +934,49 @@ body.paused * {
   font-size: 20px;
   text-shadow: 0 2px 6px #000;
 }
+
+/* 캐치 링: 흰 링(잡을 곳) + 줄어드는 노란 링 */
+#catchRing {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  display: none;
+  z-index: 40;
+}
+#catchY {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  border: 4px solid #ffe36b;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ffe36b;
+}
+/* 송구 베이스 버튼: 베이스 위 큰 원 */
+#fieldBtns {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+  z-index: 45;
+}
+#fieldBtns button {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  margin: -38px 0 0 -38px;
+  border-radius: 50%;
+  font: inherit;
+  font-size: 20px;
+  color: var(--navy);
+  background: rgba(242, 182, 50, 0.92);
+  border: 3px solid #fff;
+  box-shadow: 0 0 18px rgba(255, 220, 120, 0.9);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
