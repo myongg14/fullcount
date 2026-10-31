@@ -208,6 +208,7 @@ function buyPlayer(x) {
       addMoney(league.my, -c.price, `${c.team === 'FA' ? 'FA 계약' : '이적료'}: ${nameOf(x)}`);
       if (c.team !== 'FA') league.funds[c.team] = won1(league.funds[c.team] + c.price);
       league.salary[idOf(x)] = sal;
+      ensureRec(x).v0 = playerCard(x).value; // 입단 때 몸값
       if (c.team !== 'FA') autoFill(c.team); // 판 팀의 빈자리
       addNews(`${teamShort(league.my)}, ${teamShort(c.team)}에서 ${nameOf(x)} 영입 (${c.price.toFixed(1)}억)`);
       afterMarketChange(`${nameOf(x)} 영입! ${isBatter(x) ? (LINEUPS.m.includes(x) ? '타순에 들어갔어요' : '후보로 들어갔어요') : x.role === 'SP' ? '선발 로테이션에 들어갔어요' : '불펜에 들어갔어요'}`);
@@ -466,6 +467,7 @@ function renderMarketDetail() {
     <p>OVR <b>${c.ovr}</b> · 잠재력 ${'★'.repeat(potStars(r))}${'☆'.repeat(5 - potStars(r))} · 몸값 <b>${c.value}억</b> · 연봉 ${c.salary.toFixed(1)}억${coreOf(team === 'FA' ? league.my : team).includes(idOf(x)) && team !== 'FA' ? ' · 핵심 선수' : ''}</p>
     ${bars}
     <p>이번 시즌: ${seasonLine(x)}</p>
+    ${r.v0 ? `<p>입단 때 몸값 ${r.v0}억 → 지금 몸값 <b>${c.value}억</b>${r.age <= 23 ? ' · 키우면 더 오를 수 있어요' : ''}</p>` : ''}
     <p class="mk-note">몸값 계산: 기본 ${base.toFixed(1)}억(OVR ${ovr}) × 나이 ${ageFactor(r, ovr).toFixed(2)} × 성적 ${perfFactor(r).toFixed(2)} × 포지션 ${posF.toFixed(2)} = ${c.value}억</p>
     <div class="te-btns">${btns}</div>`;
 }

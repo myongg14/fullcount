@@ -183,7 +183,10 @@
       <button id="lgAuto">⏩ 이 경기 자동 진행</button>
       <button id="lgPostNext" class="te-main">⏩ 다음 결과 보기</button>
       <button id="lgEnd" class="te-main">🏆 시즌 마무리</button>
+      <button id="lgDraft" class="te-main">🎓 신인 드래프트</button>
+      <button id="lgNextSeason" class="te-main">▶ 다음 시즌 시작</button>
       <button id="lgMarket">🔁 이적 시장</button>
+      <button id="lgTrain">🏋️ 특별 훈련</button>
       <button id="lgRoster">📋 선수단·선발</button>
       <button id="lgSched">📅 일정</button>
       <button id="lgLedger">💰 자금 내역</button>
@@ -223,6 +226,32 @@
     </div>
     <p id="mkMsg" class="mk-msg"></p>
     <div class="te-btns"><button id="mkClose" class="te-main">닫기</button></div>
+  </div>
+</div>
+
+<!-- 신인 드래프트: 가상의 신인 목록(스카우트 평가)과 지명 -->
+<div id="draft" class="sheet">
+  <div class="sheet-box wide">
+    <h2>🎓 신인 드래프트</h2>
+    <p id="dfInfo" class="mk-msg"></p>
+    <div class="mk-cols2">
+      <div id="dfList" class="pl-list tall"></div>
+      <div><h3>지명 결과</h3><div id="dfLog" class="df-log"></div></div>
+    </div>
+    <div class="te-btns"><button id="dfClose" class="te-main">닫기</button></div>
+  </div>
+</div>
+
+<!-- 특별 훈련: 선수와 능력치 고르기(3연전마다 한 명, 1억) -->
+<div id="train" class="sheet">
+  <div class="sheet-box wide">
+    <h2>🏋️ 특별 훈련</h2>
+    <p id="trInfo" class="mk-note"></p>
+    <div class="mk-cols2">
+      <div id="trList" class="pl-list tall"></div>
+      <div><h3>집중할 능력치</h3><div id="trAttrs" class="tabs"></div><p id="trMsg" class="mk-msg"></p></div>
+    </div>
+    <div class="te-btns"><button id="trClose" class="te-main">닫기</button></div>
   </div>
 </div>
 
@@ -271,6 +300,7 @@
 <script src="js/transfer.js"></script>
 <script src="js/league.js"></script>
 <script src="js/market.js"></script>
+<script src="js/offseason.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

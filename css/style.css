@@ -1547,3 +1547,34 @@ body.paused * {
   font-style: normal;
   text-align: right;
 }
+
+/* 드래프트·특별 훈련 */
+#draft,
+#train {
+  z-index: 215;
+}
+.df-pick {
+  font: inherit;
+  font-size: 16px;
+  min-height: 48px;
+  margin-top: 6px;
+  align-self: flex-start;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--gold);
+  color: var(--navy);
+  touch-action: manipulation;
+}
+.df-log {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #cfd8ff;
+}
+.lg-report {
+  margin-top: 6px;
+  font-size: 15px;
+  color: #cfd8ff;
+  max-height: 22vh;
+  overflow-y: auto;
+}
