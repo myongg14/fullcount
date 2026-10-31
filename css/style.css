@@ -19,7 +19,7 @@ body {
   font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   color: var(--cream);
 }
-canvas {
+#cv {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -125,6 +125,10 @@ canvas {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
+#card {
+  align-items: center;
+  gap: 8px;
+}
 #card span {
   font-size: 18px;
   color: #fff;
@@ -172,26 +176,37 @@ canvas {
   margin-top: 4px;
   text-shadow: 0 2px 6px #000;
 }
+/* 배너: 가운데에 1초 → 위로 작게 올라가 잠깐 → 사라짐(공이 오는 가운데를 오래 가리지 않게) */
 #banner.show {
-  animation: pop 1.5s ease-out forwards;
+  animation: pop 2.2s ease-out forwards;
 }
 @keyframes pop {
   0% {
     opacity: 0;
     transform: scale(0.6);
   }
-  12% {
+  8% {
     opacity: 1;
     transform: scale(1.08);
   }
-  22% {
+  15% {
     transform: scale(1);
   }
-  80% {
+  45% {
     opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  58% {
+    opacity: 1;
+    transform: translateY(-20vh) scale(0.5);
+  }
+  88% {
+    opacity: 1;
+    transform: translateY(-20vh) scale(0.5);
   }
   100% {
     opacity: 0;
+    transform: translateY(-20vh) scale(0.5);
   }
 }
 .ov {
@@ -239,7 +254,24 @@ canvas {
   flex-wrap: wrap;
   padding: 0 10px;
 }
+/* 버튼 사이 빈 곳은 탭이 화면(스윙)으로 가도록 */
+#ctl {
+  pointer-events: none;
+}
+/* 타격 버튼은 화면 아래 양옆(엄지 닿는 곳)에 세로로 */
+#ctl.split {
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 calc(env(safe-area-inset-left, 0px) + 12px);
+}
+#ctl .grp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 #ctl button {
+  pointer-events: auto;
+  min-height: 48px;
   font: inherit;
   font-size: 19px;
   color: var(--cream);
@@ -500,18 +532,15 @@ canvas {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 타자 카드 안의 작은 9칸 핫존 */
 #zone {
-  position: fixed;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 84px;
-  height: 110px;
+  display: block;
+  width: 63px;
+  height: 82px;
   background: rgba(10, 20, 50, 0.4);
   border: 1px solid #2a3a72;
   border-radius: 4px;
   pointer-events: none;
-  opacity: 0.85;
 }
 #vig {
   position: fixed;

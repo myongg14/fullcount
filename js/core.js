@@ -49,6 +49,7 @@ const SETTINGS = Object.assign(
     tod: 'auto', // 시간: 'auto' 이닝 따라 바뀜, 'day' 낮, 'evening' 저녁, 'night' 밤
     sound: true, // 소리 켜기/끄기
     volume: 0.8, // 음량(0~1)
+    hotZoneOverlay: false, // 타석 존 위에 핫존 색칸을 옅게 보여줄지(끄면 테두리만)
   },
   loadSettings(),
 );
@@ -65,6 +66,11 @@ const LEVELS = {
 };
 // 지금 난이도 설정
 const level = () => LEVELS[SETTINGS.level] || LEVELS.pro;
+// 핫존 보이기 설정표
+const HOT_ZONE_VIEW = {
+  overlayHot: [0.12, 0.25], // '존 위 핫존' 켰을 때 뜨거운 칸 투명도 [기본, 뜨거울수록 더함]
+  overlayCold: [0.05, 0.1], // 차가운 칸 투명도 [기본, 차가울수록 더함]
+};
 // 시간 설정 → 시간대 번호(0 낮, 1 저녁, 2 밤, 3 노을)
 const TOD_INDEX = { day: 0, evening: 1, night: 2 };
 // 타이틀 화면에서 보여줄 시간대(자동이면 노을)
