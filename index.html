@@ -25,7 +25,8 @@
 
 <!-- 경기 중 표시: 투수 교체 버튼, 타자 카드, 정보 띠, 안내 글, 배너, 상황별 버튼 -->
 <button id="sw"></button>
-<div id="card"></div>
+<!-- 오른쪽 위 타자 카드: 이름·타순·오늘 기록 + 작은 9칸 핫존(공이 지나간 자리) -->
+<div id="card"><div id="cardText"></div><canvas id="zone" width="84" height="110"></canvas></div>
 <div id="info"></div>
 <div id="hint"></div>
 <div id="banner"></div>
@@ -38,8 +39,6 @@
   <div class="bar" id="pwb"><i id="pwf"></i></div>
 </div>
 
-<!-- 미니 스트라이크존(왼쪽 가운데에 보인다) -->
-<canvas id="zone" width="84" height="110"></canvas>
 
 <!-- 타이틀 화면 -->
 <div class="ov" id="title">
@@ -55,6 +54,8 @@
       <div class="seg" data-key="level"><button data-v="rookie">루키</button><button data-v="pro">프로</button></div>
       <span class="set-label">이닝</span>
       <div class="seg" data-key="innings"><button data-v="3">3회</button><button data-v="6">6회</button><button data-v="9">9회</button></div>
+      <span class="set-label">존 위 핫존</span>
+      <div class="seg" data-key="hotZone"><button data-v="off">끄기</button><button data-v="on">켜기</button></div>
     </div>
     <div class="set-row">
       <span class="set-label">시간</span>

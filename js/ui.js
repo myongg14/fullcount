@@ -148,13 +148,17 @@ function updateControls() {
     h += `<button data-a="si" class="${infieldShift ? 'sel' : ''}">내야 시프트</button><button data-a="so" class="${outfieldShift ? 'sel' : ''}">외야 시프트</button>`;
   } else if (pitcherMode && phase === 'windup' && bases.some(x => x)) h = '<button data-a="pk">견제</button>';
   else if (!pitcherMode && phase === 'windup') {
-    if (!stealReq && !steal && stealer() >= 0) h += '<button data-a="st">도루!</button>';
-    h += buntReq ? '<button data-a="bt">번트 취소</button>' : '<button data-a="bt">번트</button>';
-    h += `<button data-a="sm">${swingMode === 'p' ? '💪 강공' : '🎯 정확'}</button><button data-a="gs">노림수: ${['없음', '직구', '변화구'][guessType]}</button>`;
+    // 타격 버튼: 왼쪽 아래(도루·번트), 오른쪽 아래(스윙 방식·노림수) — 엄지가 닿는 곳
+    let left = '';
+    if (!stealReq && !steal && stealer() >= 0) left += '<button data-a="st">도루!</button>';
+    left += buntReq ? '<button data-a="bt">번트 취소</button>' : '<button data-a="bt">번트</button>';
+    const right = `<button data-a="sm">${swingMode === 'p' ? '💪 강공' : '🎯 정확'}</button><button data-a="gs">노림수: ${['없음', '직구', '변화구'][guessType]}</button>`;
+    h = `<div class="grp">${left}</div><div class="grp">${right}</div>`;
   }
   if (c.dataset.h !== h) {
     c.dataset.h = h;
     c.innerHTML = h;
+    c.classList.toggle('split', h.startsWith('<div class="grp">'));
   }
   c.style.display = h ? 'flex' : 'none';
 }
@@ -231,7 +235,7 @@ $('sw').addEventListener('pointerdown', e => {
 }
 // 오른쪽 위 타자 카드
 const cardEl = $('card');
-// 오른쪽 위 타자 카드를 그린다
+// 오른쪽 위 타자 카드(이름·기록)를 그린다
 function cardUpd() {
   if (phase === 'title' || phase === 'over') {
     cardEl.style.display = 'none';
@@ -243,13 +247,13 @@ function cardUpd() {
   if (!r) return;
   const P = PITCHERS[curPitcher],
     t = (zoneStats[bt][bi] || []).reduce((a, c) => [a[0] + c.h, a[1] + c.n], [0, 0]);
-  cardEl.style.display = 'block';
-  cardEl.innerHTML = `<small>${TEAM_NAMES[bt]} ${bi + 1}번 · ${r[1]}</small><br><span>${r[0]}</span> ${curHand() < 0 ? '좌타' : '우타'}<br><small>오늘 ${t[0]}/${t[1]} · 투수 ${P.n}(${P.hand === 'L' ? '좌' : '우'}완)</small>`;
+  cardEl.style.display = 'flex';
+  $('cardText').innerHTML = `<small>${TEAM_NAMES[bt]} ${bi + 1}번 · ${r[1]}</small><br><span>${r[0]}</span> ${curHand() < 0 ? '좌타' : '우타'}<br><small>오늘 ${t[0]}/${t[1]} · 투수 ${P.n}(${P.hand === 'L' ? '좌' : '우'}완)</small>`;
 }
-// 미니 스트라이크존: 타자 핫/콜드 존 + 공이 지나간 위치
+// 타자 카드 안 작은 스트라이크존: 내 타자의 핫/콜드 9칸 + 공이 지나간 위치
 const miniZoneCanvas = $('zone');
 const miniZoneCtx = miniZoneCanvas.getContext('2d');
-// 왼쪽 가운데 미니 스트라이크존(핫존·공 위치)을 그린다
+// 타자 카드 안 작은 스트라이크존(핫존·공이 지나간 자리)을 그린다
 function zoneUpd() {
   const W = miniZoneCanvas.width,
     H = miniZoneCanvas.height,
@@ -270,26 +274,11 @@ function zoneUpd() {
         miniZoneCtx.fillStyle = v >= 0 ? `rgba(232,69,60,${0.15 + v * 0.6})` : `rgba(60,120,240,${0.15 - v * 0.6})`;
         miniZoneCtx.fillRect(x0, y0, x1 - x0, y1 - y0);
       }
-    miniZoneCtx.font = '9px Jua, sans-serif';
-    miniZoneCtx.textAlign = 'left';
-    miniZoneCtx.textBaseline = 'top';
-    miniZoneCtx.fillStyle = '#fff';
-    miniZoneCtx.fillText(LINEUPS.m[curBatter()][0], 3, 3);
-    {
-      const cs = zoneStats.m[curBatter()];
-      let hh = 0,
-        nn = 0;
-      cs.forEach(x => {
-        hh += x.h;
-        nn += x.n;
-      });
-      miniZoneCtx.fillText(`안타 ${hh}/${nn}`, 3, H - 12);
-    }
   }
   miniZoneCtx.strokeStyle = 'rgba(230,238,255,.7)';
   miniZoneCtx.lineWidth = 1;
   miniZoneCtx.strokeRect(X(-ZONE_HALF_W), Y(ZONE_TOP), X(ZONE_HALF_W) - X(-ZONE_HALF_W), Y(ZONE_BOTTOM) - Y(ZONE_TOP));
-  if (!pitch || pitch.xT === undefined) return;
+  if (!pitchPassed()) return;
   const c = swing && swing.miss ? '#9fb0e8' : swing ? '#f2b632' : inZone(pitch) ? '#5fd16a' : '#ffffff';
   miniZoneCtx.fillStyle = c;
   miniZoneCtx.beginPath();
@@ -302,7 +291,9 @@ zone3DCanvas.width = 256;
 zone3DCanvas.height = 256;
 const zone3DCtx = zone3DCanvas.getContext('2d');
 const zone3DTex = new THREE.CanvasTexture(zone3DCanvas);
-// 홈플레이트 위 3D 핫존 격자(타자 시점)
+// 공이 지나간 자리를 보여줘도 되는지(던지기 전·날아오는 중에는 목표 위치를 미리 알려주지 않는다)
+const pitchPassed = () => !!pitch && pitch.xT !== undefined && !['windup', 'pitch', 'aim', 'anim'].includes(phase);
+// 홈플레이트 위 3D 스트라이크존 판(타자 시점, 테두리·핫존·공 자리)
 const zone3D = new THREE.Mesh(
   new THREE.PlaneGeometry(2 * ZONE_HALF_W, ZONE_TOP - ZONE_BOTTOM),
   new THREE.MeshBasicMaterial({
@@ -319,7 +310,7 @@ zone3D.renderOrder = 5;
 scene.add(zone3D);
 // 3D 핫존을 마지막으로 그린 내용 표시
 let zone3DKey = '';
-// 홈플레이트 위 3D 핫존 격자를 그린다
+// 홈플레이트 위 스트라이크존을 그린다. 기본은 얇은 테두리만, 설정 '존 위 핫존'을 켜면 옅은 핫존 색칸도
 function zone3DUpd() {
   zone3D.visible = !(phase === 'title' || phase === 'over' || pitcherMode);
   if (!zone3D.visible) return;
@@ -327,31 +318,40 @@ function zone3DUpd() {
     H = zone3DCanvas.height,
     g = zone3DCtx;
   const team = !pitcherMode ? 'm' : 'o',
-    idx = curBatter();
+    idx = curBatter(),
+    overlay = SETTINGS.hotZoneOverlay,
+    shown = pitchPassed();
   // 내용이 바뀌었을 때만 다시 그린다(텍스처를 GPU로 보내는 일을 줄여 iPad 성능을 아낀다)
-  const key = [team, idx, [0, 1, 2, 3, 4, 5, 6, 7, 8].map(c => effectiveHot(team, idx, c).toFixed(3)), pitch && pitch.xT, pitch && pitch.yT, swing ? (swing.miss ? 2 : 1) : 0].join();
+  const key = [overlay, team, idx, overlay ? [0, 1, 2, 3, 4, 5, 6, 7, 8].map(c => effectiveHot(team, idx, c).toFixed(3)) : '', shown && pitch.xT, shown && pitch.yT, swing ? (swing.miss ? 2 : 1) : 0].join();
   if (key === zone3DKey) return;
   zone3DKey = key;
   g.clearRect(0, 0, W, H);
-  for (let r = 0; r < 3; r++)
-    for (let c = 0; c < 3; c++) {
-      const v = effectiveHot(team, idx, r * 3 + c);
-      g.fillStyle = v >= 0 ? `rgba(232,69,60,${0.5 + v * 0.5})` : `rgba(40,100,230,${0.08 + (1 + v) * 0.25})`;
-      g.fillRect((c * W) / 3, (r * H) / 3, W / 3, H / 3);
+  if (overlay) {
+    const [h0, h1] = HOT_ZONE_VIEW.overlayHot,
+      [c0, c1] = HOT_ZONE_VIEW.overlayCold;
+    for (let r = 0; r < 3; r++)
+      for (let c = 0; c < 3; c++) {
+        const v = effectiveHot(team, idx, r * 3 + c);
+        g.fillStyle = v >= 0 ? `rgba(232,69,60,${h0 + v * h1})` : `rgba(40,100,230,${c0 - v * c1})`;
+        g.fillRect((c * W) / 3, (r * H) / 3, W / 3, H / 3);
+      }
+    g.beginPath();
+    for (let i = 1; i < 3; i++) {
+      g.moveTo((i * W) / 3, 0);
+      g.lineTo((i * W) / 3, H);
+      g.moveTo(0, (i * H) / 3);
+      g.lineTo(W, (i * H) / 3);
     }
-  g.strokeStyle = 'rgba(255,255,255,.85)';
-  g.lineWidth = 4;
-  g.strokeRect(2, 2, W - 4, H - 4);
-  g.beginPath();
-  for (let i = 1; i < 3; i++) {
-    g.moveTo((i * W) / 3, 0);
-    g.lineTo((i * W) / 3, H);
-    g.moveTo(0, (i * H) / 3);
-    g.lineTo(W, (i * H) / 3);
+    g.strokeStyle = 'rgba(255,255,255,.35)';
+    g.lineWidth = 1.5;
+    g.stroke();
   }
-  g.lineWidth = 2;
-  g.stroke();
-  if (pitch && pitch.xT !== undefined) {
+  // 존 테두리(얇게)
+  g.strokeStyle = 'rgba(255,255,255,.7)';
+  g.lineWidth = 3;
+  g.strokeRect(1.5, 1.5, W - 3, H - 3);
+  // 공이 지나간 자리
+  if (shown) {
     const x = ((pitch.xT + ZONE_HALF_W) / (2 * ZONE_HALF_W)) * W,
       y = ((ZONE_TOP - pitch.yT) / (ZONE_TOP - ZONE_BOTTOM)) * H;
     g.fillStyle = swing && swing.miss ? '#9fb0e8' : swing ? '#f2b632' : '#ffffff';
@@ -433,7 +433,8 @@ function countFps(t) {
 function renderSettings() {
   document.querySelectorAll('#settings .seg').forEach(seg => {
     const key = seg.dataset.key;
-    const cur = key === 'sound' ? (SETTINGS.sound ? 'on' : 'off') : String(SETTINGS[key]);
+    const cur =
+      key === 'sound' ? (SETTINGS.sound ? 'on' : 'off') : key === 'hotZone' ? (SETTINGS.hotZoneOverlay ? 'on' : 'off') : String(SETTINGS[key]);
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === cur));
   });
   $('volFill').style.width = Math.round(SETTINGS.volume * 100) + '%';
@@ -444,6 +445,7 @@ function renderSettings() {
 function setSetting(key, v) {
   if (key === 'innings') SETTINGS.innings = Number(v);
   else if (key === 'sound') SETTINGS.sound = v === 'on';
+  else if (key === 'hotZone') SETTINGS.hotZoneOverlay = v === 'on';
   else SETTINGS[key] = v;
   saveSettings();
   renderSettings();
