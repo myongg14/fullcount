@@ -92,6 +92,10 @@
 <div id="season-modal">
   <h2>🏆 페넌트레이스</h2>
   <div class="box" id="season-info"></div>
+  <div class="season-btns">
+    <button id="btn-market" class="title-btn">🔁 이적 시장</button>
+    <button id="btn-lineup" class="title-btn">📋 타순 바꾸기</button>
+  </div>
   <div class="cta" id="season-next">경기 시작</div>
 </div>
 
@@ -118,6 +122,44 @@
       <button id="teReset">처음 이름으로 되돌리기</button>
       <button id="teClose">닫기</button>
     </div>
+  </div>
+</div>
+
+<!-- 이적 시장: 다른 팀을 골라 내 선수 1~2명 ↔ 상대 선수 1명, 또는 FA 영입 -->
+<div id="market" class="sheet">
+  <div class="sheet-box wide">
+    <h2>🔁 이적 시장</h2>
+    <div id="mkInfo" class="mk-note"></div>
+    <div id="mkTabs" class="tabs"></div>
+    <div class="mk-cols">
+      <div><h3>내 선수 (1~2명)</h3><div id="mkMine" class="pl-list"></div></div>
+      <div><h3>데려올 선수 (1명)</h3><div id="mkTheirs" class="pl-list"></div></div>
+    </div>
+    <div id="mkSum" class="mk-sum"></div>
+    <div id="mkMsg" class="mk-msg"></div>
+    <div class="te-btns"><button id="mkGo" class="te-main">제안</button><button id="mkClose">닫기</button></div>
+  </div>
+</div>
+
+<!-- 타순 바꾸기: 줄을 끌어서(또는 두 번 탭해서) 맞바꾸기, 선발 투수 고르기 -->
+<div id="lineup" class="sheet">
+  <div class="sheet-box">
+    <h2>📋 타순 바꾸기</h2>
+    <p class="mk-note">줄을 끌어서 다른 줄 위에 놓거나, 두 줄을 차례로 탭하면 맞바꿔요</p>
+    <div id="luRows"></div>
+    <div id="luWarn" class="mk-msg"></div>
+    <h3>선발 투수</h3>
+    <div id="luPitchers" class="lu-pitchers"></div>
+    <div class="te-btns"><button id="luDone" class="te-main">완료</button></div>
+  </div>
+</div>
+
+<!-- 두 가지 중 고르기 창 -->
+<div id="choice">
+  <div class="sheet-box">
+    <h2 id="chTitle"></h2>
+    <p id="chText"></p>
+    <div class="te-btns"><button id="chA" class="te-main"></button><button id="chB"></button></div>
   </div>
 </div>
 
@@ -152,6 +194,7 @@
 <script src="js/running.js"></script>
 <script src="js/game.js"></script>
 <script src="js/season.js"></script>
+<script src="js/transfer.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

@@ -251,7 +251,7 @@ function cardUpd() {
     bi = curBatter(),
     r = LINEUPS[bt][bi];
   if (!r) return;
-  const P = PITCHERS[curPitcher],
+  const P = activePitcher(),
     t = (zoneStats[bt][bi] || []).reduce((a, c) => [a[0] + c.h, a[1] + c.n], [0, 0]);
   cardEl.style.display = 'flex';
   $('cardText').innerHTML = `<small>${TEAM_NAMES[bt]} ${bi + 1}번 · ${r[1]}</small><br><span>${r[0]}</span> ${curHand() < 0 ? '좌타' : '우타'}<br><small>오늘 ${t[0]}/${t[1]} · 투수 ${P.n}(${P.hand === 'L' ? '좌' : '우'}완)</small>`;
@@ -536,34 +536,42 @@ function drawTapX(g, px, py, r) {
 const TEAM_KEY = 'nb3_team';
 // 팀 색 후보
 const TEAM_PALETTE = [0xc8102e, 0x1d3f8f, 0x2f7de1, 0x1f8a4c, 0x6a2c91, 0xe06a00, 0x00a0b0, 0x222222];
-// 처음 이름(되돌리기용)
-const TEAM_DEFAULT = {
-  name: TEAM_NAMES.m,
-  color: TEAM_COLORS.m[0],
-  batters: LINEUPS.m.map(p => p[0]),
-  pitchers: PITCHERS.map(p => p.n),
-};
-// 편집한 팀을 게임에 반영한다(전광판·유니폼 가슴 글자·타순·투수 버튼)
+// 처음 팀 이름·색(되돌리기용). 선수 이름은 선수마다 원래 이름(타자 p[6], 투수 n0)으로 돌아간다
+const TEAM_DEFAULT = { name: TEAM_NAMES.m, color: TEAM_COLORS.m[0], names: {} };
+// 지금 내 팀 선수 전체(타순 + 후보 + 투수)
+const myPlayers = () => [...LINEUPS.m, ...MY_BENCH, ...PITCHERS];
+// 편집한 팀을 게임에 반영한다(전광판·유니폼 가슴 글자·타순·투수 버튼). 이름은 선수 id로 기억한다
 function applyTeam(t) {
   TEAM_NAMES.m = t.name;
   TEAM_COLORS.m[0] = TEAM_COLORS.m[1] = t.color;
   TEAM_COLORS.m[3] = t.name;
-  LINEUPS.m.forEach((p, i) => (p[0] = t.batters[i] || TEAM_DEFAULT.batters[i]));
-  PITCHERS.forEach((p, i) => (p.n = t.pitchers[i] || TEAM_DEFAULT.pitchers[i]));
+  myPlayers().forEach(x => {
+    const n = (t.names || {})[idOf(x)] || (isBatter(x) ? x[6] : x.n0);
+    if (isBatter(x)) x[0] = n;
+    else x.n = n;
+  });
   renderPitcherButtons();
   $('sw').textContent = '🔄 ' + PITCHERS[curPitcher].n;
   dressAll();
   boardUpd();
 }
-// 저장된 팀 편집(없으면 처음 이름)
+// 저장된 팀 편집(없으면 처음 이름). 예전 저장(순서별 이름)은 처음 선수 id로 옮긴다
 function loadTeam() {
   try {
     const t = JSON.parse(localStorage.getItem(TEAM_KEY));
-    if (t && t.name) return Object.assign({}, TEAM_DEFAULT, t);
+    if (t && t.name) {
+      let names = t.names || {};
+      if (Array.isArray(t.batters)) {
+        names = {};
+        t.batters.forEach((n, i) => (names['m' + (i + 1)] = n));
+        (t.pitchers || []).forEach((n, i) => (names['p' + (i + 1)] = n));
+      }
+      return { name: t.name, color: t.color != null ? t.color : TEAM_DEFAULT.color, names };
+    }
   } catch (e) {}
-  return Object.assign({}, TEAM_DEFAULT);
+  return Object.assign({}, TEAM_DEFAULT, { names: {} });
 }
-// 이름 정리: 앞뒤 공백 빼고, 너무 길면 자르고, 비었으면 처음 이름
+// 이름 정리: 특수문자·앞뒤 공백 빼고, 너무 길면 자르고, 비었으면 원래 이름
 const cleanName = (v, def, max) => String(v || '').replace(/[<>&"]/g, '').trim().slice(0, max) || def;
 let teColor = TEAM_DEFAULT.color;
 // 팀 편집 창을 지금 값으로 채워서 연다
@@ -574,22 +582,23 @@ function openTeamEdit(t) {
   $('teColors').innerHTML = TEAM_PALETTE.map(
     c => `<button data-c="${c}" style="background:${hexCss(c)}" class="${c === teColor ? 'on' : ''}" aria-label="팀 색"></button>`,
   ).join('');
-  $('teBatters').innerHTML = LINEUPS.m.map(
-    (p, i) => `<label>${i + 1}번 · ${p[1]}<input data-b="${i}" maxlength="6" value="${t.batters[i]}"></label>`,
-  ).join('');
+  $('teBatters').innerHTML = [...LINEUPS.m, ...MY_BENCH]
+    .map((p, i) => `<label>${i < 9 ? i + 1 + '번' : '후보'} · ${p[1]}<input data-id="${p[5]}" maxlength="6" value="${p[0]}"></label>`)
+    .join('');
   $('tePitchers').innerHTML = PITCHERS.map(
-    (p, i) => `<label>${p.hand === 'L' ? '좌완' : '우완'} · ${p.s.split(' · ')[0]}<input data-p="${i}" maxlength="6" value="${t.pitchers[i]}"></label>`,
+    P => `<label>${P.hand === 'L' ? '좌완' : '우완'} · ${P.s.split(' · ')[0]}<input data-id="${P.id}" maxlength="6" value="${P.n}"></label>`,
   ).join('');
   $('teamEdit').style.display = 'block';
 }
 // 창의 입력값을 저장하고 반영한다
 function saveTeamEdit() {
-  const t = {
-    name: cleanName($('teName').value, TEAM_DEFAULT.name, 8),
-    color: teColor,
-    batters: [...document.querySelectorAll('#teBatters input')].map((el, i) => cleanName(el.value, TEAM_DEFAULT.batters[i], 6)),
-    pitchers: [...document.querySelectorAll('#tePitchers input')].map((el, i) => cleanName(el.value, TEAM_DEFAULT.pitchers[i], 6)),
-  };
+  const t = loadTeam();
+  t.name = cleanName($('teName').value, TEAM_DEFAULT.name, 8);
+  t.color = teColor;
+  document.querySelectorAll('#teBatters input, #tePitchers input').forEach(el => {
+    const x = myPlayers().find(y => idOf(y) === el.dataset.id);
+    if (x) t.names[el.dataset.id] = cleanName(el.value, isBatter(x) ? x[6] : x.n0, 6);
+  });
   try {
     localStorage.setItem(TEAM_KEY, JSON.stringify(t));
   } catch (e) {}
@@ -615,7 +624,8 @@ $('teReset').addEventListener('click', () => {
   try {
     localStorage.removeItem(TEAM_KEY);
   } catch (e) {}
-  applyTeam(TEAM_DEFAULT);
-  openTeamEdit(TEAM_DEFAULT);
+  const d = Object.assign({}, TEAM_DEFAULT, { names: {} });
+  applyTeam(d);
+  openTeamEdit(d);
 });
 applyTeam(loadTeam());

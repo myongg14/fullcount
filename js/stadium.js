@@ -578,7 +578,7 @@ function boardUpd() {
   try {
     // 내용이 바뀌었을 때만 다시 그린다(1024×512 텍스처를 매번 GPU로 보내지 않게)
     const key = JSON.stringify([totalInnings, inning, pitcherMode, curBatter(), myRuns, oppRuns, score, myLine, oppLine, myHits, oppHits,
-      myErrors, oppErrors, TEAM_NAMES, balls, strikes, outs, bases, curHand(), curPitcher, pitch && pitch.kmh, strikeouts, homers, LINEUPS,
+      myErrors, oppErrors, TEAM_NAMES, balls, strikes, outs, bases, curHand(), curPitcher, activePitcher().n, pitch && pitch.kmh, strikeouts, homers, LINEUPS,
       document.fonts ? document.fonts.status : '']);
     if (key === boardKey) return;
     boardKey = key;
@@ -709,7 +709,7 @@ function boardDraw() {
     376,
   );
   g.fillText(
-    `투수 ${PITCHERS[curPitcher].n}(${PITCHERS[curPitcher].hand === 'L' ? '좌' : '우'}완)${pitch && pitch.kmh ? '  ' + Math.round(pitch.kmh * SPEED_DISPLAY_SCALE) + 'km/h' : ''}`,
+    `투수 ${activePitcher().n}(${activePitcher().hand === 'L' ? '좌' : '우'}완)${pitch && pitch.kmh ? '  ' + Math.round(pitch.kmh * SPEED_DISPLAY_SCALE) + 'km/h' : ''}`,
     512,
     412,
   );
@@ -719,7 +719,7 @@ function boardDraw() {
   g.fillStyle = '#fff';
   g.font = '24px Jua, sans-serif';
   g.fillText(
-    `투수 ${PITCHERS[curPitcher].n}  ·  ${P ? '삼진 ' + (strikeouts || 0) + '  ·  피안타 ' + (oppHits || 0) : '안타 ' + (myHits || 0) + '  ·  홈런 ' + (homers || 0)}`,
+    `투수 ${activePitcher().n}  ·  ${P ? '삼진 ' + (strikeouts || 0) + '  ·  피안타 ' + (oppHits || 0) : '안타 ' + (myHits || 0) + '  ·  홈런 ' + (homers || 0)}`,
     512,
     468,
   );
