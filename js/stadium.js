@@ -624,6 +624,9 @@ function boardDraw() {
     g.textAlign = 'left';
     g.fillStyle = '#fff';
     g.font = '26px Jua, sans-serif';
+    // 긴 팀 이름은 득점표 칸에 들어가게 글자를 줄인다
+    const tw = g.measureText(TEAM_NAMES[k]).width;
+    if (tw > 220) g.font = `${Math.floor((26 * 220) / tw)}px Jua, sans-serif`;
     g.fillText(TEAM_NAMES[k], 20, y);
     g.textAlign = 'center';
     g.font = '24px Jua, sans-serif';

@@ -649,6 +649,7 @@ function backToTitle() {
   $('banner').classList.remove('show');
   $('title').style.display = '';
   phase = 'title';
+  renderSeasonButton();
   updateHud();
   updateControls();
   cardUpd();

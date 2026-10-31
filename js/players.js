@@ -218,6 +218,9 @@ function human(o) {
   const setChest = (t, col) => {
     cx2.clearRect(0, 0, 128, 48);
     cx2.font = 'bold 30px sans-serif';
+    // 긴 팀 이름은 가슴판에 들어가게 글자를 줄인다
+    const w = cx2.measureText(t).width;
+    if (w > 116) cx2.font = `bold ${Math.floor((30 * 116) / w)}px sans-serif`;
     cx2.textAlign = 'center';
     cx2.textBaseline = 'middle';
     cx2.lineWidth = 4;

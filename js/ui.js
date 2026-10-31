@@ -202,10 +202,14 @@ $('ctl').addEventListener('pointerdown', e => {
     if (i >= 0) doPick(i, cpuStealPlan && i === stealer());
   }
 });
-$('pc').innerHTML = PITCHERS.map(
-  (P, i) =>
-    `<button data-i="${i}" class="${i ? '' : 'on'}">${P.n}<small>${P.hand === 'L' ? '좌완' : '우완'} · ${P.s}</small></button>`,
-).join('');
+// 타이틀 화면 투수 고르기 버튼을 그린다(이름을 바꾸면 다시 그린다)
+function renderPitcherButtons() {
+  $('pc').innerHTML = PITCHERS.map(
+    (P, i) =>
+      `<button data-i="${i}" class="${i === curPitcher ? 'on' : ''}">${P.n}<small>${P.hand === 'L' ? '좌완' : '우완'} · ${P.s}</small></button>`,
+  ).join('');
+}
+renderPitcherButtons();
 $('pc').addEventListener('pointerdown', e => {
   const b = e.target.closest('button');
   if (!b) return;
@@ -528,3 +532,90 @@ function drawTapX(g, px, py, r) {
   cross();
   g.restore();
 }
+// ---------- 팀 편집(내 팀 이름·색, 선수 이름) ----------
+const TEAM_KEY = 'nb3_team';
+// 팀 색 후보
+const TEAM_PALETTE = [0xc8102e, 0x1d3f8f, 0x2f7de1, 0x1f8a4c, 0x6a2c91, 0xe06a00, 0x00a0b0, 0x222222];
+// 처음 이름(되돌리기용)
+const TEAM_DEFAULT = {
+  name: TEAM_NAMES.m,
+  color: TEAM_COLORS.m[0],
+  batters: LINEUPS.m.map(p => p[0]),
+  pitchers: PITCHERS.map(p => p.n),
+};
+// 편집한 팀을 게임에 반영한다(전광판·유니폼 가슴 글자·타순·투수 버튼)
+function applyTeam(t) {
+  TEAM_NAMES.m = t.name;
+  TEAM_COLORS.m[0] = TEAM_COLORS.m[1] = t.color;
+  TEAM_COLORS.m[3] = t.name;
+  LINEUPS.m.forEach((p, i) => (p[0] = t.batters[i] || TEAM_DEFAULT.batters[i]));
+  PITCHERS.forEach((p, i) => (p.n = t.pitchers[i] || TEAM_DEFAULT.pitchers[i]));
+  renderPitcherButtons();
+  $('sw').textContent = '🔄 ' + PITCHERS[curPitcher].n;
+  dressAll();
+  boardUpd();
+}
+// 저장된 팀 편집(없으면 처음 이름)
+function loadTeam() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TEAM_KEY));
+    if (t && t.name) return Object.assign({}, TEAM_DEFAULT, t);
+  } catch (e) {}
+  return Object.assign({}, TEAM_DEFAULT);
+}
+// 이름 정리: 앞뒤 공백 빼고, 너무 길면 자르고, 비었으면 처음 이름
+const cleanName = (v, def, max) => String(v || '').replace(/[<>&"]/g, '').trim().slice(0, max) || def;
+let teColor = TEAM_DEFAULT.color;
+// 팀 편집 창을 지금 값으로 채워서 연다
+function openTeamEdit(t) {
+  t = t || loadTeam();
+  $('teName').value = t.name;
+  teColor = t.color;
+  $('teColors').innerHTML = TEAM_PALETTE.map(
+    c => `<button data-c="${c}" style="background:${hexCss(c)}" class="${c === teColor ? 'on' : ''}" aria-label="팀 색"></button>`,
+  ).join('');
+  $('teBatters').innerHTML = LINEUPS.m.map(
+    (p, i) => `<label>${i + 1}번 · ${p[1]}<input data-b="${i}" maxlength="6" value="${t.batters[i]}"></label>`,
+  ).join('');
+  $('tePitchers').innerHTML = PITCHERS.map(
+    (p, i) => `<label>${p.hand === 'L' ? '좌완' : '우완'} · ${p.s.split(' · ')[0]}<input data-p="${i}" maxlength="6" value="${t.pitchers[i]}"></label>`,
+  ).join('');
+  $('teamEdit').style.display = 'block';
+}
+// 창의 입력값을 저장하고 반영한다
+function saveTeamEdit() {
+  const t = {
+    name: cleanName($('teName').value, TEAM_DEFAULT.name, 8),
+    color: teColor,
+    batters: [...document.querySelectorAll('#teBatters input')].map((el, i) => cleanName(el.value, TEAM_DEFAULT.batters[i], 6)),
+    pitchers: [...document.querySelectorAll('#tePitchers input')].map((el, i) => cleanName(el.value, TEAM_DEFAULT.pitchers[i], 6)),
+  };
+  try {
+    localStorage.setItem(TEAM_KEY, JSON.stringify(t));
+  } catch (e) {}
+  applyTeam(t);
+  $('teamEdit').style.display = 'none';
+}
+$('teamEditBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  openTeamEdit();
+});
+// 창 안을 눌러도 경기가 시작되지 않게
+$('teamEdit').addEventListener('pointerdown', e => e.stopPropagation());
+$('teColors').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  teColor = Number(b.dataset.c);
+  $('teColors').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+});
+$('teSave').addEventListener('click', saveTeamEdit);
+$('teClose').addEventListener('click', () => ($('teamEdit').style.display = 'none'));
+$('teReset').addEventListener('click', () => {
+  try {
+    localStorage.removeItem(TEAM_KEY);
+  } catch (e) {}
+  applyTeam(TEAM_DEFAULT);
+  openTeamEdit(TEAM_DEFAULT);
+});
+applyTeam(loadTeam());
