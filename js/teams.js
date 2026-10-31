@@ -79,3 +79,75 @@ const OPP_STYLE = [
   { tag: '젊은 투수진', spd: 0, con: -1, cmd: 3, velo: 4 },
   { tag: '끈질긴 타선', spd: 1, con: 2, cmd: -3, velo: 0 },
 ];
+// ---------- KBO 데이터(kbo-data.js) → 선수 기록·게임 형식 ----------
+// 팀 편집에서 고친 KBO 선수 이름(선수 id → 이름)
+const KBO_NAME_KEY = 'nb3_kbo_names';
+function loadKboNames() {
+  try {
+    return JSON.parse(localStorage.getItem(KBO_NAME_KEY)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+// 선수 기록(id → 기록). 타자: type 'B', 투수: type 'P'
+const KBO_PLAYERS = {};
+// 팀 코드 → 팀
+const KBO_BY_CODE = {};
+{
+  const names = loadKboNames();
+  KBO_TEAMS.forEach(t => {
+    KBO_BY_CODE[t.code] = t;
+    t.batters.forEach(([id, name, age, pos, hand, con, pow, spd, def, pot, v]) => {
+      KBO_PLAYERS[id] = { id, team: t.code, type: 'B', name: names[id] || name, name0: name, age, pos, hand, con, pow, spd, def, pot, v: !!v };
+    });
+    t.pitchers.forEach(([id, name, age, hand, role, slot, velo, ctrl, pitches, sta, pot, v]) => {
+      KBO_PLAYERS[id] = {
+        id, team: t.code, type: 'P', name: names[id] || name, name0: name, age, hand, role, slot, velo, ctrl,
+        pitches: pitches.split(','), sta, pot, v: !!v,
+      };
+    });
+  });
+}
+// 팀의 선수 기록 목록
+const kboBatters = code => KBO_BY_CODE[code].batters.map(r => KBO_PLAYERS[r[0]]);
+const kboPitchers = code => KBO_BY_CODE[code].pitchers.map(r => KBO_PLAYERS[r[0]]);
+// 이름으로 KBO 선수 찾기(처음 내 팀 선수의 능력치를 채울 때)
+const kboFindByName = (name, type) => Object.values(KBO_PLAYERS).find(p => p.name0 === name && p.type === type);
+// 타자 기록 → 타순 배열 [이름, 포지션, 주력, 컨택, 좌우타, id, 원래 이름, 파워, 수비]
+const kboBatterRow = r => [r.name, r.pos, r.spd, r.con, r.hand === 'L' ? 'L' : 'R', r.id, r.name0, r.pow, r.def];
+// 구종 → [이름, 비행 시간, 최고 구속에서 뺄 구속 범위(낮은 쪽, 높은 쪽)]
+const KBO_PITCH = {
+  fast: ['직구', 850, -9, 0],
+  sinker: ['싱커', 930, -12, -3],
+  slider: ['슬라이더', 980, -20, -10],
+  change: ['체인지업', 1250, -24, -14],
+  fork: ['포크', 1200, -20, -11],
+  curve: ['커브', 1150, -34, -22],
+  knuckle: ['너클볼', 1250, -45, -33],
+};
+// 투구폼 → 게임 투구폼 번호(ARM_SLOTS)와 이름, 투수 시점 카메라 높이
+const KBO_SLOT = { O: [0, '오버핸드'], T: [0, '스리쿼터'], S: [1, '사이드암'], U: [2, '언더핸드'], M: [3, '서브마린'] };
+const SLOT_CAM_Y = [2.05, 1.85, 1.6, 1.35];
+// 투수 기록 → PITCHERS 형식(pitching.js의 pitchDef를 쓰므로 그 파일을 읽은 뒤에 부른다)
+function kboPitcherObj(r) {
+  const [slot, slotName] = KBO_SLOT[r.slot] || KBO_SLOT.O,
+    ars = r.pitches.filter(k => KBO_PITCH[k]).map(k => {
+      const [n, d, lo, hi] = KBO_PITCH[k];
+      return pitchDef(k, n, d, [r.velo + lo, r.velo + hi]);
+    });
+  return {
+    n: r.name,
+    n0: r.name0,
+    id: r.id,
+    hand: r.hand,
+    role: r.role,
+    cmd: 0.45 + r.ctrl * 0.04, // 제구 1 → 0.49, 10 → 0.85
+    s: `${slotName} · ${(ars[1] || ars[0]).n}`,
+    slot,
+    cy: SLOT_CAM_Y[slot],
+    ars,
+  };
+}
+// 파워·수비가 경기에 주는 아주 작은 효과(±5% 안쪽). 값이 없는 선수(예전 데이터)는 효과 없음
+const ATTR_EFFECT = { perPoint: 0.01, max: 0.05 };
+const attrFactor = v => (v == null ? 1 : 1 + clamp((v - 5) * ATTR_EFFECT.perPoint, -ATTR_EFFECT.max, ATTR_EFFECT.max));

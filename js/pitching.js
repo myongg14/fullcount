@@ -170,8 +170,10 @@ function cpuPitcherTick() {
   if (cpuStaff) {
     // 시즌: 상대 팀 자기 투수진에서 교체
     if (cpuStamina < 20 && cpuStaff.length > 1) {
-      const o = cpuStaff[cpuIdx].n;
-      cpuIdx = (cpuIdx + 1) % cpuStaff.length;
+      const o = cpuStaff[cpuIdx].n,
+        rp = cpuStaff.map((P, i) => i).filter(i => cpuStaff[i].role === 'RP');
+      // 선발이 지치면 불펜(RP)에서, 불펜끼리는 다음 불펜으로
+      cpuIdx = rp.length ? rp[(rp.indexOf(cpuIdx) + 1) % rp.length] : (cpuIdx + 1) % cpuStaff.length;
       setMound(cpuStaff[cpuIdx]);
       cpuStamina = 100;
       setTimeout(() => showBanner('투수 교체', o + ' → ' + cpuStaff[cpuIdx].n + ' 등판', false), 600);

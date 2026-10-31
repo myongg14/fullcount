@@ -105,6 +105,8 @@ function resolveSwing() {
   let D =
     q > 0.78 ? randRange(250, 340) : q > 0.5 ? randRange(150, 260) : q > 0.25 ? randRange(70, 160) : randRange(30, 80);
   D *= swingMode === 'p' ? 1.3 : 1.12;
+  // 타자 파워(KBO 데이터): 타구 거리 ±5% 안쪽
+  D *= attrFactor((LINEUPS[pitcherMode ? 'o' : 'm'][curBatter()] || [])[7]);
   {
     const aw = (th * Math.PI) / 180;
     D *= 1 + 0.035 * (windX * Math.sin(aw) - windZ * Math.cos(aw));
