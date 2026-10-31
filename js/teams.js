@@ -55,7 +55,16 @@ const hotZoneProfile = name => {
 };
 LINEUPS.m.forEach(p => HOT_ZONES.m.push(hotZoneProfile(p[0])));
 LINEUPS.o.forEach(p => HOT_ZONES.o.push(hotZoneProfile(p[0])));
-// 유니폼: [상의, 모자, 바지, 가슴 글자, 글자색]
+// 유니폼 설정표
+const UNIFORM = {
+  clashGap: 110, // 두 팀 상의 색 차이(RGB 거리)가 이보다 작으면 원정 팀이 다른 유니폼(밝으면 어두운 색, 어두우면 흰색)
+  altLight: 0xf2f2f2, // 원정 바꿔 입기: 흰색
+  altDark: 0x3a3f4b, // 원정 바꿔 입기: 짙은 회색(흰 유니폼 팀용)
+  sleeve: 0x1c2233, // 언더셔츠 소매 기본 색(팀 색이 없을 때)
+};
+// KBO 팀 유니폼을 게임 형식으로: [상의, 모자, 바지, 가슴 글자, 글자색, 양말, 소매]
+const kboUniform = k => [k.colors[0], k.colors[1], k.colors[2], k.nick, k.colors[3], k.colors[4], k.colors[5]];
+// 유니폼: [상의, 모자, 바지, 가슴 글자, 글자색, 양말(없으면 모자 색), 소매(없으면 기본)]
 const TEAM_COLORS = {
   m: [0xc8102e, 0xc8102e, 0xeceadf, 'TIGERS', '#fff'],
   o: [0x14235a, 0x14235a, 0xdedbd0, 'BEARS', '#fff'],

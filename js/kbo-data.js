@@ -2,7 +2,7 @@
 // 이적·은퇴로 틀린 이름이 있을 수 있다: 타이틀의 '팀 편집'에서 고칠 수 있다. 가상 선수는 v: 1로 표시한다.
 //
 // 팀: code(선수 id 앞부분), name, short, nick(가슴 글자), city, pop(인기도 0.6~1.4, 관중 수입),
-//     colors: [상의, 모자, 바지, 가슴 글자색]
+//     colors: [상의, 모자, 바지, 가슴 글자색, 양말, 언더셔츠 소매] — 팀마다 한눈에 다르게
 // 타자 한 줄: [id, 이름, 나이, 포지션, 좌우타(L/R/S), 컨택, 파워, 주력, 수비(1~10), 잠재력(1~99), 가상(1이면 가상)]
 //   타순 9명이 먼저, 그 뒤 후보 5명
 // 투수 한 줄: [id, 이름, 나이, 좌우완(L/R), 역할(SP 선발/RP 불펜), 투구폼(O 오버핸드, T 스리쿼터, S 사이드암, U 언더핸드, M 서브마린),
@@ -12,7 +12,7 @@
 const KBO_TEAMS = [
   {
     code: 'KIA', name: 'KIA 타이거즈', short: 'KIA', nick: 'TIGERS', city: '광주', pop: 1.35,
-    colors: [0xea0029, 0x1a1a1a, 0xeceadf, '#fff'],
+    colors: [0xd0021b, 0x111111, 0xeceadf, '#fff', 0x111111, 0x111111], // 빨강 + 검정
     batters: [
       ['KIA-B01', '박찬호', 30, 'SS', 'R', 6, 3, 8, 8, 60],
       ['KIA-B02', '김선빈', 36, '2B', 'R', 8, 3, 5, 6, 55],
@@ -44,7 +44,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'SAM', name: '삼성 라이온즈', short: '삼성', nick: 'LIONS', city: '대구', pop: 1.25,
-    colors: [0x074ca1, 0x074ca1, 0xeceadf, '#fff'],
+    colors: [0x0846b0, 0x0846b0, 0xeceadf, '#fff', 0x0846b0, 0x0846b0], // 파랑
     batters: [
       ['SAM-B01', '김지찬', 24, 'CF', 'L', 7, 2, 9, 6, 70],
       ['SAM-B02', '김성윤', 26, 'RF', 'L', 7, 3, 8, 7, 68],
@@ -76,7 +76,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'LG', name: 'LG 트윈스', short: 'LG', nick: 'TWINS', city: '서울', pop: 1.3,
-    colors: [0xc30452, 0x1a1a1a, 0xeceadf, '#fff'],
+    colors: [0xf2f2f2, 0x1a1a1a, 0xf2f2f2, '#c30452', 0x1a1a1a, 0x1a1a1a], // 흰색 + 검정, 자주 글자
     batters: [
       ['LG-B01', '홍창기', 32, 'RF', 'L', 9, 3, 6, 6, 72],
       ['LG-B02', '신민재', 29, '2B', 'L', 7, 2, 8, 7, 66],
@@ -108,7 +108,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'DOO', name: '두산 베어스', short: '두산', nick: 'BEARS', city: '서울', pop: 1.15,
-    colors: [0x131230, 0x131230, 0xdedbd0, '#fff'],
+    colors: [0x131230, 0x131230, 0xdedbd0, '#fff', 0x131230, 0x131230], // 남색
     batters: [
       ['DOO-B01', '정수빈', 35, 'CF', 'L', 6, 2, 8, 9, 60],
       ['DOO-B02', '오명진', 24, '2B', 'L', 6, 3, 6, 7, 70],
@@ -140,7 +140,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'KT', name: 'KT 위즈', short: 'KT', nick: 'WIZ', city: '수원', pop: 0.9,
-    colors: [0x1a1a1a, 0x1a1a1a, 0xdedbd0, '#ff3b3b'],
+    colors: [0x1a1a1a, 0x1a1a1a, 0x1a1a1a, '#ff3b3b', 0xed1c24, 0xed1c24], // 검정 + 빨강
     batters: [
       ['KT-B01', '배정대', 30, 'CF', 'R', 5, 4, 7, 8, 58],
       ['KT-B02', '김민혁', 30, 'LF', 'L', 7, 2, 6, 5, 60],
@@ -172,7 +172,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'SSG', name: 'SSG 랜더스', short: 'SSG', nick: 'LANDERS', city: '인천', pop: 1.0,
-    colors: [0xce0e2d, 0xce0e2d, 0xeceadf, '#fff'],
+    colors: [0xf2f2f2, 0xce0e2d, 0xf2f2f2, '#ce0e2d', 0xce0e2d, 0xffb81c], // 흰색 + 빨강·노랑
     batters: [
       ['SSG-B01', '최지훈', 28, 'CF', 'L', 6, 3, 8, 8, 66],
       ['SSG-B02', '정준재', 22, '2B', 'L', 5, 2, 8, 6, 72],
@@ -204,7 +204,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'LOT', name: '롯데 자이언츠', short: '롯데', nick: 'GIANTS', city: '부산', pop: 1.35,
-    colors: [0x041e42, 0x041e42, 0xdedbd0, '#ff4d4d'],
+    colors: [0x041e42, 0xd00f31, 0xeceadf, '#ff4d4d', 0xd00f31, 0xd00f31], // 남색 + 빨강
     batters: [
       ['LOT-B01', '황성빈', 28, 'CF', 'L', 6, 2, 9, 7, 62],
       ['LOT-B02', '고승민', 25, '2B', 'L', 7, 4, 6, 6, 74],
@@ -236,7 +236,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'HAN', name: '한화 이글스', short: '한화', nick: 'EAGLES', city: '대전', pop: 1.3,
-    colors: [0xfc4e00, 0x1a1a1a, 0xeceadf, '#fff'],
+    colors: [0xfc4e00, 0x1a1a1a, 0xeceadf, '#fff', 0xfc4e00, 0x1a1a1a], // 주황 + 검정
     batters: [
       ['HAN-B01', '플로리얼', 27, 'CF', 'L', 5, 6, 8, 7, 70],
       ['HAN-B02', '문현빈', 21, 'LF', 'L', 7, 5, 6, 5, 86],
@@ -268,7 +268,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'NC', name: 'NC 다이노스', short: 'NC', nick: 'DINOS', city: '창원', pop: 0.85,
-    colors: [0x315288, 0x315288, 0xdedbd0, '#e3c27a'],
+    colors: [0x1d467f, 0x1d467f, 0xdedbd0, '#e3c27a', 0xc6a052, 0x1d467f], // 푸른 남색 + 금색
     batters: [
       ['NC-B01', '박민우', 32, '2B', 'L', 8, 3, 7, 7, 68],
       ['NC-B02', '김주원', 23, 'SS', 'S', 6, 5, 7, 8, 86],
@@ -300,7 +300,7 @@ const KBO_TEAMS = [
   },
   {
     code: 'KIW', name: '키움 히어로즈', short: '키움', nick: 'HEROES', city: '서울', pop: 0.7,
-    colors: [0x820024, 0x820024, 0xdedbd0, '#fff'],
+    colors: [0x820024, 0x820024, 0xdedbd0, '#fff', 0x820024, 0x2a2a2a], // 버건디
     batters: [
       ['KIW-B01', '이주형', 24, 'CF', 'L', 6, 5, 6, 6, 80],
       ['KIW-B02', '송성문', 29, '3B', 'L', 8, 6, 6, 7, 74],
