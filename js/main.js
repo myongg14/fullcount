@@ -255,6 +255,15 @@ function update(dt) {
       else myRuns += score;
       score = 0;
       endGame();
+    } else if (twoWay && inning >= MERCY.afterInning && inning <= totalInnings && batRuns - fieldRuns >= MERCY.runs) {
+      // 콜드게임: 이닝 중이라도 점수 차가 15점 이상이 되는 순간 끝
+      ssRuns(score);
+      (pitcherMode ? oppLine : myLine)[inning - 1] = score;
+      if (pitcherMode) oppRuns += score;
+      else myRuns += score;
+      score = 0;
+      mercyEnd = true;
+      endGame();
     } else if (inning > totalInnings) endGame();
     else nextPitch();
   }
