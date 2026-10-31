@@ -4,8 +4,8 @@
 const camLook = new THREE.Vector3(0, 1, -10);
 // 타자 시점 카메라 위치
 const camHome = new THREE.Vector3(0, 1.0, 4.0);
-// 화면 탭 처리(스윙, 경기 시작, 추가 진루, 태그업, 건너뛰기)
-function input() {
+// 화면 탭 처리(스윙, 경기 시작, 추가 진루, 태그업, 건너뛰기). e: 탭 이벤트(정밀 타격용 위치)
+function input(e) {
   if (paused) return;
   unlockAudio();
   if ($('hof').style.display === 'flex') return;
@@ -35,7 +35,14 @@ function input() {
     return;
   }
   if (phase === 'pitch' && !swing && !pitcherMode)
-    swing = { t0: now, contactT: now + 90, miss: false, done: false, bunt: buntReq };
+    swing = {
+      t0: now,
+      contactT: now + 90,
+      miss: false,
+      done: false,
+      bunt: buntReq,
+      tap: e && e.clientX != null ? { x: e.clientX, y: e.clientY } : null, // 정밀 타격: 탭한 화면 위치
+    };
 }
 gameCanvas.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -49,7 +56,7 @@ gameCanvas.addEventListener('pointerdown', e => {
     aimMove(e);
     return;
   }
-  input();
+  input(e);
 });
 gameCanvas.addEventListener('pointermove', e => {
   if (aimPointer === e.pointerId) aimMove(e);
@@ -163,6 +170,9 @@ function update(dt) {
     // 판정 시점: 공이 지나간 뒤 조금(루키는 늦은 스윙도 받아주도록 더 기다린다)
     const judgeT = pitcherMode ? 1.08 : Math.max(1.08, 1 + (level().lateWindow * 1000) / pitch.t.d);
     if (phase === 'pitch' && t >= judgeT) {
+      // 너무 늦게 휘두른 스윙(맞기 전에 판정)도 타이밍 미터에 보여준다
+      if (swing && !swing.done && !pitcherMode)
+        showTimingMeter((swing.contactT - (pitch.t0 + pitch.t.d)) / 1000 / level().swingWindow);
       let k = swing ? 'swingmiss' : inZone(pitch) ? 'strike' : 'ball';
       if (k === 'swingmiss' && (pitch.warp || pitch.fake)) $('info').textContent = '속았다!';
       if (
@@ -299,13 +309,22 @@ addEventListener('resize', resize);
 resize();
 // 직전 프레임 시각
 let lastFrameT = 0;
-// 일시정지한 동안 흐른 시간(게임 시계 now에서 뺀다)
+// 일시정지·히트 스톱으로 멈춘 시간(게임 시계 now에서 뺀다)
 let clockOffset = 0;
+// 히트 스톱이 끝나는 시각(실제 시간)
+let hitStopEnd = 0;
 // 매 프레임: 경기 진행 후 화면을 그린다
 function frame(t) {
   countFps(t);
   // 일시정지 중: 게임 시계를 멈추고 화면도 새로 그리지 않는다(마지막 화면이 그대로 남는다)
   if (paused) {
+    clockOffset += t - lastFrameT;
+    lastFrameT = t;
+    requestAnimationFrame(frame);
+    return;
+  }
+  // 히트 스톱: 맞힌 직후 아주 잠깐 게임 시계를 멈춘다(화면도 그대로)
+  if (t < hitStopEnd) {
     clockOffset += t - lastFrameT;
     lastFrameT = t;
     requestAnimationFrame(frame);

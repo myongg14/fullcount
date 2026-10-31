@@ -861,3 +861,60 @@ body.paused * {
 #volBar.off {
   opacity: 0.4;
 }
+
+/* 타이밍 미터 */
+#meter {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+  transform: translateX(-50%);
+  width: min(60vw, 360px);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+#meter.show {
+  opacity: 1;
+  transition: none;
+}
+#meter .track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #4a7cff, #2a3358 35%, #2a3358 65%, #e8453c);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+#meter .perfect {
+  position: absolute;
+  left: 40%;
+  width: 20%;
+  top: 0;
+  bottom: 0;
+  background: rgba(95, 209, 106, 0.55);
+}
+#meter .mid {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  top: -4px;
+  bottom: -4px;
+  background: #fff;
+}
+#meter b {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid #14102a;
+}
+#meterText {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  text-shadow: 0 2px 6px #000;
+}

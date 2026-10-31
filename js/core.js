@@ -50,6 +50,7 @@ const SETTINGS = Object.assign(
     sound: true, // 소리 켜기/끄기
     volume: 0.8, // 음량(0~1)
     hotZoneOverlay: false, // 타석 존 위에 핫존 색칸을 옅게 보여줄지(끄면 테두리만)
+    precisionBat: false, // 정밀 타격: 공이 있는 곳을 탭해야 맞음(위면 땅볼, 아래면 뜬공)
   },
   loadSettings(),
 );
