@@ -362,15 +362,31 @@ body {
   padding: 8px 14px;
   touch-action: manipulation;
 }
+/* 조준점: 흰 링(목표). 테두리 근처를 노리면 주황색 */
 #aimM {
   position: fixed;
-  width: 34px;
-  height: 34px;
-  margin: -17px 0 0 -17px;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  display: none;
+}
+#aimM.edge {
+  border-color: #ff9a3d;
+  box-shadow: 0 0 10px #ff9a3d;
+}
+/* 노란 링: 줄었다 커졌다 반복 */
+#ringY {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   border: 3px solid #ffe36b;
   border-radius: 50%;
-  box-shadow: 0 0 12px #ffe36b;
-  pointer-events: none;
+  box-sizing: border-box;
+  box-shadow: 0 0 8px #ffe36b;
   display: none;
 }
 #aimM:after {
