@@ -4,6 +4,9 @@
 const camLook = new THREE.Vector3(0, 1, -10);
 // 타자 시점 카메라 위치
 const camHome = new THREE.Vector3(0, 1.0, 4.0);
+// 송구 베이스를 고를 때 카메라 위치와 바라보는 점(내야 전체)
+const FIELD_CAM = new THREE.Vector3(0, 85, 12);
+const FIELD_LOOK = new THREE.Vector3(0, 0, -21);
 // 화면 탭 처리(스윙, 경기 시작, 추가 진루, 태그업, 건너뛰기). e: 탭 이벤트(정밀 타격용 위치)
 function input(e) {
   if (paused) return;
@@ -57,6 +60,7 @@ gameCanvas.addEventListener('pointerdown', e => {
     aimMove(e);
     return;
   }
+  if (catchTap(e.clientX, e.clientY)) return; // 캐치 링 탭
   input(e);
 });
 gameCanvas.addEventListener('pointermove', e => {
@@ -269,9 +273,12 @@ function update(dt) {
       camera.zoom = 1;
       camera.updateProjectionMatrix();
     }
-    const k = 1 - Math.exp(-2.2 * dt);
+    // 송구 베이스를 고르는 동안은 내야 전체가 보이게 높이서 내려다본다
+    const look = throwChoice ? FIELD_LOOK : p;
+    if (throwChoice) want.copy(FIELD_CAM);
+    const k = 1 - Math.exp(-(throwChoice ? 14 : 2.2) * dt);
     camera.position.lerp(want, k);
-    camLook.lerp(p, 1 - Math.exp(-4 * dt));
+    camLook.lerp(look, 1 - Math.exp(-(throwChoice ? 14 : 4) * dt));
     camera.lookAt(camLook);
   } else if (trot) {
     if (camera.zoom !== 1) {
@@ -351,7 +358,10 @@ function frame(t) {
     camera.position.set(Math.sin(t / 4000) * 3, 2.4, 5);
     camera.lookAt(0, 1, -12);
     catcher.visible = true;
-  } else update(dt * (now < slowUntil ? 0.25 : 1));
+  } else update(dt * (now < slowUntil ? 0.25 : fieldSlow() ? FIELD_TUNING.slow : 1));
+  // 캐치 링·송구 버튼은 카메라가 움직인 뒤 화면 위치를 맞춘다
+  updateCatchRing();
+  updateThrowChoice();
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }

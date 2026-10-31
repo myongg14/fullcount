@@ -448,6 +448,17 @@ function applyHit(k) {
       bases = [0, 0, 0];
       addOuts(3);
       txt = '트리플 플레이!';
+    } else if (pl === 'fc') {
+      // 내가 고른 베이스로 포스 아웃: 그 베이스로 가던 주자 아웃, 나머지 주자는 한 베이스씩, 타자는 1루
+      const fb = hit.forceBase,
+        nb = [batterTag(), r1, r2];
+      let scored = occupied(r3);
+      if (fb === 3) scored = 0;
+      else nb[fb] = 0;
+      bases = nb;
+      if (ob < 2) r = scored;
+      addOuts(1);
+      txt = ['', '2루 포스 아웃', '3루 포스 아웃', '홈 포스 아웃'][fb];
     } else if (pl === 'dp' && r1 && ob < 2) {
       if (ob === 0) r = occupied(r3);
       bases = [0, 0, r2];
@@ -473,6 +484,24 @@ function applyHit(k) {
         txt = '태그업 아웃!';
       }
       addOuts(tg.ok ? 1 : 2);
+    } else if (hit.cpuTag) {
+      // 컴퓨터 주자 태그업: 내가 송구한 베이스의 주자는 확률로 아웃, 나머지는 진루
+      const c = hit.cpuTag;
+      let extra = 0;
+      if (c.t3) {
+        bases[2] = 0;
+        if (c.throwTo === 3 && c.out) extra++;
+        else r += 1;
+      }
+      if (c.t2) {
+        const rv = bases[1];
+        bases[1] = 0;
+        if (c.throwTo === 2 && c.out) extra++;
+        else bases[2] = rv;
+      }
+      if (ob + 1 + extra >= 3) r = 0;
+      txt = extra ? '태그업 주자 송구 아웃!' : r ? '희생플라이' : '태그업 진루';
+      addOuts(1 + extra);
     } else {
       if (pitcherMode && ob < 2 && bases[2] && rand() < 0.6) {
         r = 1;
@@ -573,6 +602,8 @@ function backToTitle() {
   batterRig.root.rotation.z = 0;
   batterAnim(-1);
   // 공·주자·연출 정리
+  catchRing = null;
+  throwChoice = null;
   swing = null;
   hit = null;
   steal = null;
