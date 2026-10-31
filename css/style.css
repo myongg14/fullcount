@@ -1439,3 +1439,27 @@ body.paused * {
 #schedule .lg-table {
   font-size: 15px;
 }
+
+/* 구단 자금 */
+.lg-money {
+  font-size: 17px;
+  margin: 2px 0 8px;
+}
+.lg-money b {
+  color: var(--gold);
+  font-weight: 400;
+}
+.lg-money small {
+  font-size: 15px;
+  color: #cfd8ff;
+}
+.neg,
+.lg-money b.neg {
+  color: #ff5a5a;
+}
+.pos {
+  color: #5fd16a;
+}
+#ledger {
+  z-index: 210;
+}

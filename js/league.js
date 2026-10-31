@@ -84,6 +84,7 @@ function newLeague(my, len) {
   };
   ssReset();
   gameOuts = {};
+  initFunds();
 }
 function saveLeague() {
   if (!league) return;
@@ -165,7 +166,7 @@ function exitLeague() {
   league = null;
   isSeason = false;
   cpuStaff = null;
-  ['leagueHub', 'leagueSetup', 'schedule'].forEach(id => ($(id).style.display = 'none'));
+  ['leagueHub', 'leagueSetup', 'schedule', 'ledger'].forEach(id => ($(id).style.display = 'none'));
 }
 
 // ---------- 오늘 경기 ----------
@@ -214,6 +215,7 @@ function leagueApplyMatch() {
   moundPitcher = null;
   refreshHotZones();
   gameOuts = {};
+  league.hl = { hr: 0, k: 0, dive: 0 }; // 이번 경기 명장면(자금 보너스)
 }
 // 내 팀 경기 직접 하기
 function playMyGame() {
@@ -359,7 +361,7 @@ function gamesBehind(c, lead) {
 
 // ---------- 하루 진행 ----------
 // 내 팀 경기가 끝난 뒤(직접 했든 자동이든): 결과 기록 → 다른 경기 계산 → 다음 날
-function finishMyMatch(myR, oppR) {
+function finishMyMatch(myR, oppR, played) {
   const m = todayMatch();
   if (!m) return;
   const r = { h: m.h, a: m.a, hs: m.myHome ? myR : oppR, as: m.myHome ? oppR : myR };
@@ -367,10 +369,15 @@ function finishMyMatch(myR, oppR) {
   const res = myR > oppR ? '승' : myR < oppR ? '패' : '무';
   league.msg = `지난 경기: ${teamName(m.opp)}전 ${myR} : ${oppR} ${res}`;
   league.myStarter = null;
+  // 돈: 내 경기(직접 했으면 명장면 보너스도)
+  league.money = gameFinance(r, played ? league.hl : null);
   if (league.phase === 'reg') {
     recordResult(r);
     const others = league.sched[league.day].filter(x => x[0] !== league.my && x[1] !== league.my).map(([h, a]) => simGame(h, a));
-    others.forEach(recordResult);
+    others.forEach(x => {
+      gameFinance(x);
+      recordResult(x);
+    });
     league.yday = [r, ...others];
     league.day++;
     if (league.day >= league.sched.length) startPost();
@@ -380,7 +387,7 @@ function finishMyMatch(myR, oppR) {
 // 직접 한 경기가 끝나면(endGame에서)
 function leagueGameOver(myR, oppR) {
   isSeason = false;
-  finishMyMatch(myR, oppR);
+  finishMyMatch(myR, oppR, true);
   showHub();
 }
 // 이 경기 자동 진행(내 팀 경기도 결과만 계산)
@@ -402,6 +409,9 @@ function startPost() {
   league.phase = 'post';
   league.post = { seeds, done: [], cur: makeSeries(0, seeds[3], seeds[4]), champ: null };
   league.msg += ` · 정규 시즌 끝! 1위 ${teamName(seeds[0])}`;
+  // 순위 상금과 포스트시즌 진출금
+  rankList().forEach((c, i) => addMoney(c, ECONOMY.rankPrize[i], `정규 시즌 ${i + 1}위 상금`));
+  seeds.forEach(c => addMoney(c, ECONOMY.postEntry, '포스트시즌 진출'));
 }
 // 시리즈 다음 경기의 홈 팀(높은 순위 팀이 1·2차전 홈. 5전: 5차전도, 7전: 6·7차전도)
 function seriesHome(s) {
@@ -424,6 +434,8 @@ function postGameDone(r) {
   if (!s.winner) return;
   league.post.done.push(s);
   league.msg = `${POST_ROUNDS[s.r].label}: ${teamName(s.winner)} 승리!`;
+  addMoney(s.winner, ECONOMY.postSeriesWin, `${POST_ROUNDS[s.r].label} 승리`);
+  if (s.r === 3) addMoney(s.winner, ECONOMY.ksChampion, '한국시리즈 우승');
   if (s.r === 3) {
     league.post.champ = s.winner;
     league.post.cur = null;
@@ -438,8 +450,10 @@ function simPostGame() {
   const s = league.post && league.post.cur;
   if (!s || s.hi === league.my || s.lo === league.my) return;
   const h = seriesHome(s),
-    a = h === s.hi ? s.lo : s.hi;
-  postGameDone(simGame(h, a, true));
+    a = h === s.hi ? s.lo : s.hi,
+    r = simGame(h, a, true);
+  gameFinance(r);
+  postGameDone(r);
   saveLeague();
   renderHub();
 }
@@ -502,6 +516,12 @@ function renderHub() {
   $('lgHead').textContent =
     `${teamName(my)} · ${t.w}승 ${t.l}패${t.d ? ' ' + t.d + '무' : ''}` + (t.w + t.l + t.d ? ` · ${ranks.indexOf(my) + 1}위` : ' · 시즌 시작 전');
   $('lgMsg').textContent = league.msg || '';
+  // 자금: 현재 자금, 이번 시즌 수입/지출, 지난 경기 돈. 마이너스면 빨간 글씨 + 안내
+  const f = league.funds[my];
+  $('lgMoney').innerHTML =
+    `💰 자금 <b class="${f < 0 ? 'neg' : ''}">${moneyText(f)}</b> · 이번 시즌 수입 +${league.flow.in.toFixed(1)}억 / 지출 −${league.flow.out.toFixed(1)}억 · 연봉 합계 ${payrollOf(my).toFixed(1)}억/시즌` +
+    (league.money ? `<br><small>${league.money}</small>` : '') +
+    (f < 0 ? '<br><b class="neg">자금이 마이너스예요. 선수를 팔거나 연봉을 줄이세요</b>' : '');
   // 다음 경기
   let next = '';
   if (league.phase === 'reg' && m) {
@@ -601,6 +621,7 @@ function continueLeague() {
   league = s.league;
   seasonStats = s.stats || seasonStats;
   if (!seasonStats.b) ssReset();
+  if (!league.funds) initFunds(); // 자금이 생기기 전 저장
   // 팀 편집에서 고친 KBO 선수 이름을 리그 선수단에도
   Object.values(league.rosters).forEach(R => {
     R.batters.forEach(p => KBO_PLAYERS[p[5]] && (p[0] = KBO_PLAYERS[p[5]].name));
@@ -618,7 +639,7 @@ const onTap = (id, fn) =>
     unlockAudio();
     fn();
   });
-['leagueSetup', 'leagueHub', 'schedule'].forEach(id => $(id).addEventListener('pointerdown', e => e.stopPropagation()));
+['leagueSetup', 'leagueHub', 'schedule', 'ledger'].forEach(id => $(id).addEventListener('pointerdown', e => e.stopPropagation()));
 $('lsTeams').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
@@ -649,6 +670,14 @@ onTap('lgAuto', autoMyGame);
 onTap('lgPostNext', simPostGame);
 onTap('lgEnd', finishLeague);
 onTap('lgRoster', () => openLineup());
+onTap('lgLedger', () => {
+  $('ldTable').innerHTML =
+    '<tr><th>날</th><th>내용</th><th>금액</th></tr>' +
+    (league.ledger.slice(0, 20).map(x => `<tr><td>${x.d}</td><td>${x.t}</td><td class="${x.a < 0 ? 'neg' : 'pos'}">${x.a > 0 ? '+' : ''}${moneyText(x.a)}</td></tr>`).join('') ||
+      '<tr><td colspan="3">아직 내역이 없어요</td></tr>');
+  $('ledger').style.display = 'block';
+});
+onTap('ldClose', () => ($('ledger').style.display = 'none'));
 onTap('lgSched', () => {
   renderSchedule();
   $('schedule').style.display = 'block';

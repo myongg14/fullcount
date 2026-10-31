@@ -137,6 +137,7 @@ function ssK() {
   const p = LINEUPS[pitcherMode ? 'o' : 'm'][curBatter()];
   if (p) ssB(p).ab++;
   ssP(activePitcher()).k++;
+  if (pitcherMode) leagueHighlight('k'); // 내 투수가 삼진
 }
 // 이번 경기 투수별 잡은 아웃(승·패·세이브를 정할 때)
 let gameOuts = {};

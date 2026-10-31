@@ -341,6 +341,7 @@ function tryDive(grade) {
     h.fsp = 17;
     h.fumble = false;
     if (isSeason) seasonStats.dv++;
+    leagueHighlight('dive');
     cheer(0.8, 2);
     tone(784, 0.25, 0.1, 'triangle');
   } else if (!hr) h.k = h.k === '1b' ? '2b' : '3b';
