@@ -317,6 +317,8 @@ zone3D.position.set(0, (ZONE_BOTTOM + ZONE_TOP) / 2, 0.1);
 zone3D.scale.set(1.5, 1.5, 1);
 zone3D.renderOrder = 5;
 scene.add(zone3D);
+// 3D 핫존을 마지막으로 그린 내용 표시
+let zone3DKey = '';
 // 홈플레이트 위 3D 핫존 격자를 그린다
 function zone3DUpd() {
   zone3D.visible = !(phase === 'title' || phase === 'over' || pitcherMode);
@@ -324,9 +326,13 @@ function zone3DUpd() {
   const W = zone3DCanvas.width,
     H = zone3DCanvas.height,
     g = zone3DCtx;
-  g.clearRect(0, 0, W, H);
   const team = !pitcherMode ? 'm' : 'o',
     idx = curBatter();
+  // 내용이 바뀌었을 때만 다시 그린다(텍스처를 GPU로 보내는 일을 줄여 iPad 성능을 아낀다)
+  const key = [team, idx, [0, 1, 2, 3, 4, 5, 6, 7, 8].map(c => effectiveHot(team, idx, c).toFixed(3)), pitch && pitch.xT, pitch && pitch.yT, swing ? (swing.miss ? 2 : 1) : 0].join();
+  if (key === zone3DKey) return;
+  zone3DKey = key;
+  g.clearRect(0, 0, W, H);
   for (let r = 0; r < 3; r++)
     for (let c = 0; c < 3; c++) {
       const v = effectiveHot(team, idx, r * 3 + c);
@@ -357,4 +363,68 @@ function zone3DUpd() {
     g.stroke();
   }
   zone3DTex.needsUpdate = true;
+}
+// 일시정지 중인지
+let paused = false;
+// 지금 일시정지할 수 있는지(경기 중이고, 시즌 창·기록실이 떠 있지 않을 때)
+const canPause = () =>
+  phase !== 'title' && phase !== 'over' && $('season-modal').style.display !== 'flex' && $('hof').style.display !== 'flex';
+// 일시정지: 게임 시계와 소리를 멈추고 '이어하기 / 처음으로' 창을 연다
+function openPause() {
+  if (paused || !canPause()) return;
+  paused = true;
+  // 조준 중이었으면 던지지 않고 조준만 취소
+  aimPointer = null;
+  aimEl.style.display = 'none';
+  $('pause').style.display = 'flex';
+  $('pauseBtn').style.display = 'none';
+  document.body.classList.add('paused');
+  try {
+    if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+  } catch (e) {}
+}
+// 이어하기
+function closePause() {
+  if (!paused) return;
+  paused = false;
+  $('pause').style.display = 'none';
+  document.body.classList.remove('paused');
+  try {
+    if (audioCtx) audioCtx.resume();
+  } catch (e) {}
+}
+// 일시정지 버튼은 경기 중에만 보인다
+function updatePauseButton() {
+  const d = canPause() ? 'block' : 'none';
+  if ($('pauseBtn').style.display !== d) $('pauseBtn').style.display = d;
+}
+const tapOnly = fn => e => {
+  e.preventDefault();
+  e.stopPropagation();
+  fn();
+};
+$('pauseBtn').addEventListener('pointerdown', tapOnly(openPause));
+$('resumeBtn').addEventListener('pointerdown', tapOnly(closePause));
+$('toTitleBtn').addEventListener('pointerdown', tapOnly(() => {
+  closePause();
+  backToTitle();
+}));
+$('pause').addEventListener('pointerdown', e => e.stopPropagation());
+// iPad에서 다른 앱으로 가거나 화면이 꺼지면 자동으로 일시정지
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) openPause();
+});
+// FPS 표시(PERF.showFps)
+let fpsFrames = 0;
+let fpsT0 = 0;
+function countFps(t) {
+  if (!PERF.showFps) return;
+  fpsFrames++;
+  if (t - fpsT0 >= 500) {
+    const el = $('fps');
+    el.style.display = 'block';
+    el.textContent = Math.round((fpsFrames * 1000) / (t - fpsT0)) + ' FPS';
+    fpsFrames = 0;
+    fpsT0 = t;
+  }
 }

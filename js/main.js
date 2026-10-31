@@ -6,6 +6,7 @@ const camLook = new THREE.Vector3(0, 1, -10);
 const camHome = new THREE.Vector3(0, 1.0, 4.0);
 // 화면 탭 처리(스윙, 경기 시작, 추가 진루, 태그업, 건너뛰기)
 function input() {
+  if (paused) return;
   unlockAudio();
   if ($('hof').style.display === 'flex') return;
   if ($('season-modal').style.display === 'flex') return;
@@ -38,6 +39,7 @@ function input() {
 }
 gameCanvas.addEventListener('pointerdown', e => {
   e.preventDefault();
+  if (paused) return;
   if (pitcherMode && phase === 'aim') {
     unlockAudio();
     aimPointer = e.pointerId;
@@ -295,11 +297,22 @@ addEventListener('resize', resize);
 resize();
 // 직전 프레임 시각
 let lastFrameT = 0;
+// 일시정지한 동안 흐른 시간(게임 시계 now에서 뺀다)
+let clockOffset = 0;
 // 매 프레임: 경기 진행 후 화면을 그린다
 function frame(t) {
+  countFps(t);
+  // 일시정지 중: 게임 시계를 멈추고 화면도 새로 그리지 않는다(마지막 화면이 그대로 남는다)
+  if (paused) {
+    clockOffset += t - lastFrameT;
+    lastFrameT = t;
+    requestAnimationFrame(frame);
+    return;
+  }
   const dt = Math.min(0.05, (t - lastFrameT) / 1000 || 0);
   lastFrameT = t;
-  now = t;
+  now = t - clockOffset;
+  updatePauseButton();
   if ((window.fxc = (window.fxc || 0) + 1) % 30 === 1) fx();
   if (window.fxc % 6 === 0) {
     boardUpd();

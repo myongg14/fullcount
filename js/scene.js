@@ -1,10 +1,19 @@
 // 장면: 렌더러·카메라·조명·그림자, 공통 텍스처/도형 함수, 공과 그림자, 불꽃 파티클, 시간대(낮·저녁·밤) 하늘과 조명
 
+// 성능 설정표(iPad에서 끊기면 숫자를 낮춘다)
+const PERF = {
+  maxPixelRatio: 1.25, // 그리는 해상도 배율 최대값(높을수록 선명하지만 무겁다. 예전 2.5)
+  shadowMapSize: 2048, // 그림자 지도 크기(예전 4096). 1024로 낮추면 더 가볍지만 그림자가 흐려진다
+  softShadow: false, // true면 부드러운 그림자(무겁다)
+  maxParticles: 300, // 불꽃 파티클 최대 개수(예전 500)
+  showFps: false, // true면 오른쪽 아래에 초당 프레임 수(FPS)를 보여준다. 주소 끝에 ?fps 를 붙여도 켜진다
+};
+if (/[?&]fps\b/.test(location.search)) PERF.showFps = true;
 const gameCanvas = $('cv');
 const renderer = new THREE.WebGLRenderer({ canvas: gameCanvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, PERF.maxPixelRatio));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = PERF.softShadow ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8fcdf2);
 scene.fog = new THREE.Fog(0xcfe9f7, 220, 520);
@@ -16,8 +25,8 @@ sun.position.set(-40, 80, 40);
 sun.target.position.set(0, 0, -20);
 scene.add(sun, sun.target);
 sun.castShadow = true;
-// 그림자 지도 크기(기기가 되면 4096)
-const SHADOW_MAP_SIZE = (renderer.capabilities.maxTextureSize || 2048) >= 4096 ? 4096 : 2048;
+// 그림자 지도 크기(기기가 지원하는 범위 안에서 PERF.shadowMapSize)
+const SHADOW_MAP_SIZE = Math.min(PERF.shadowMapSize, renderer.capabilities.maxTextureSize || 2048);
 sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
 Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 10, far: 220 });
 sun.shadow.bias = -0.0006;
@@ -108,7 +117,7 @@ let fwEnd = 0;
 // 다음 불꽃을 쏠 시각
 let fwNext = 0;
 // 불꽃 파티클 최대 개수
-const MAX_PARTICLES = 500;
+const MAX_PARTICLES = PERF.maxParticles;
 const particlePos = new Float32Array(MAX_PARTICLES * 3).fill(-999);
 const particleBaseColor = new Float32Array(MAX_PARTICLES * 3);
 const particleColor = new Float32Array(MAX_PARTICLES * 3);
@@ -284,7 +293,7 @@ function upgradeRealisticStadium() {
       });
       o.material.color = old.color;
       // 유니폼 색 변경(dress)이 계속 반영되도록 Color 공유
-      o.receiveShadow = true;
+      if (!o.userData.nf) o.receiveShadow = true;
     }
   });
   [
