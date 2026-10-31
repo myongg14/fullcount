@@ -284,6 +284,7 @@ function zoneUpd() {
   miniZoneCtx.beginPath();
   miniZoneCtx.arc(X(pitch.xT), Y(pitch.yT), 4, 0, Math.PI * 2);
   miniZoneCtx.fill();
+  if (swing && swing.tapWorld) drawTapX(miniZoneCtx, X(swing.tapWorld.x), Y(swing.tapWorld.y), 4);
 }
 // 3D 스트라이크존: 홈플레이트 앞, 포수 바로 앞에 실제 크기로 띄움
 const zone3DCanvas = document.createElement('canvas');
@@ -322,7 +323,7 @@ function zone3DUpd() {
     overlay = SETTINGS.hotZoneOverlay,
     shown = pitchPassed();
   // 내용이 바뀌었을 때만 다시 그린다(텍스처를 GPU로 보내는 일을 줄여 iPad 성능을 아낀다)
-  const key = [overlay, team, idx, overlay ? [0, 1, 2, 3, 4, 5, 6, 7, 8].map(c => effectiveHot(team, idx, c).toFixed(3)) : '', shown && pitch.xT, shown && pitch.yT, swing ? (swing.miss ? 2 : 1) : 0].join();
+  const key = [overlay, team, idx, overlay ? [0, 1, 2, 3, 4, 5, 6, 7, 8].map(c => effectiveHot(team, idx, c).toFixed(3)) : '', shown && pitch.xT, shown && pitch.yT, swing ? (swing.miss ? 2 : 1) : 0, shown && swing && swing.tapWorld ? swing.tapWorld.x + ':' + swing.tapWorld.y : ''].join();
   if (key === zone3DKey) return;
   zone3DKey = key;
   g.clearRect(0, 0, W, H);
@@ -361,6 +362,8 @@ function zone3DUpd() {
     g.strokeStyle = '#1a1a2a';
     g.lineWidth = 2;
     g.stroke();
+    if (swing && swing.tapWorld)
+      drawTapX(g, ((swing.tapWorld.x + ZONE_HALF_W) / (2 * ZONE_HALF_W)) * W, ((ZONE_TOP - swing.tapWorld.y) / (ZONE_TOP - ZONE_BOTTOM)) * H, 10);
   }
   zone3DTex.needsUpdate = true;
 }
@@ -429,12 +432,13 @@ function countFps(t) {
   }
 }
 // ---------- 타이틀 화면 경기 설정 ----------
+// 켜기/끄기 설정 버튼 → SETTINGS 이름
+const ON_OFF_KEYS = { sound: 'sound', hotZone: 'hotZoneOverlay', precision: 'precisionBat' };
 // 설정 버튼들의 켜짐 표시와 안내 글을 지금 설정에 맞춘다
 function renderSettings() {
   document.querySelectorAll('#settings .seg').forEach(seg => {
     const key = seg.dataset.key;
-    const cur =
-      key === 'sound' ? (SETTINGS.sound ? 'on' : 'off') : key === 'hotZone' ? (SETTINGS.hotZoneOverlay ? 'on' : 'off') : String(SETTINGS[key]);
+    const cur = key in ON_OFF_KEYS ? (SETTINGS[ON_OFF_KEYS[key]] ? 'on' : 'off') : String(SETTINGS[key]);
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === cur));
   });
   $('volFill').style.width = Math.round(SETTINGS.volume * 100) + '%';
@@ -444,8 +448,7 @@ function renderSettings() {
 // 설정 하나를 바꾸고 기억한다
 function setSetting(key, v) {
   if (key === 'innings') SETTINGS.innings = Number(v);
-  else if (key === 'sound') SETTINGS.sound = v === 'on';
-  else if (key === 'hotZone') SETTINGS.hotZoneOverlay = v === 'on';
+  else if (key in ON_OFF_KEYS) SETTINGS[ON_OFF_KEYS[key]] = v === 'on';
   else SETTINGS[key] = v;
   saveSettings();
   renderSettings();
@@ -488,3 +491,36 @@ $('settings').addEventListener('click', e => {
   });
 }
 renderSettings();
+// ---------- 타이밍 미터 ----------
+let meterTimer = 0;
+// 스윙 타이밍을 화면 아래 막대에 잠깐 보여준다(d: 완벽에서 몇 초 빠른지(-)/늦은지(+))
+function showTimingMeter(d) {
+  const ad = Math.abs(d),
+    text = ad < HIT_FEEL.meterPerfect ? '완벽!' : ad < HIT_FEEL.meterGood ? (d < 0 ? '조금 빠름' : '조금 늦음') : d < 0 ? '빠름' : '늦음';
+  $('meterDot').style.left = 50 + clamp(d / HIT_FEEL.meterRange, -1, 1) * 50 + '%';
+  $('meterText').textContent = text;
+  $('meterText').style.color = ad < HIT_FEEL.meterPerfect ? '#5fd16a' : ad < HIT_FEEL.meterGood ? '#ffe36b' : '#ff8a7a';
+  $('meter').classList.add('show');
+  clearTimeout(meterTimer);
+  meterTimer = setTimeout(() => $('meter').classList.remove('show'), HIT_FEEL.meterShowMs);
+}
+// 정밀 타격으로 탭한 자리에 흰 X를 그린다(px, py: 캔버스 좌표, r: 크기)
+function drawTapX(g, px, py, r) {
+  g.save();
+  g.lineCap = 'round';
+  g.strokeStyle = '#1a1a2a';
+  g.lineWidth = r * 0.55;
+  const cross = () => {
+    g.beginPath();
+    g.moveTo(px - r, py - r);
+    g.lineTo(px + r, py + r);
+    g.moveTo(px + r, py - r);
+    g.lineTo(px - r, py + r);
+    g.stroke();
+  };
+  cross();
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = r * 0.3;
+  cross();
+  g.restore();
+}

@@ -32,6 +32,9 @@
 <div id="banner"></div>
 <div id="ctl"></div>
 
+<!-- 타이밍 미터: 스윙할 때마다 잠깐(가운데 = 완벽, 왼쪽 = 빠름, 오른쪽 = 늦음) -->
+<div id="meter"><div class="track"><i class="perfect"></i><i class="mid"></i><b id="meterDot"></b></div><span id="meterText"></span></div>
+
 <!-- 투수 시점: 체력 막대와 투구 세기 막대 -->
 <div id="pg">
   <div id="pgl"></div>
@@ -56,6 +59,8 @@
       <div class="seg" data-key="innings"><button data-v="3">3회</button><button data-v="6">6회</button><button data-v="9">9회</button></div>
       <span class="set-label">존 위 핫존</span>
       <div class="seg" data-key="hotZone"><button data-v="off">끄기</button><button data-v="on">켜기</button></div>
+      <span class="set-label">정밀 타격</span>
+      <div class="seg" data-key="precision"><button data-v="off">끄기</button><button data-v="on">켜기</button></div>
     </div>
     <div class="set-row">
       <span class="set-label">시간</span>

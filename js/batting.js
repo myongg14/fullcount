@@ -1,5 +1,47 @@
 // 타격: 스윙 판정과 타구 결과, 담장 거리, 핫존 보너스, 좌타/우타, 타구 처리 결과 반영
 
+// 타격 손맛 설정표
+const HIT_FEEL = {
+  stopStrong: 80, // 정타(타구 질 0.78 넘음) 때 화면을 멈추는 시간(ms)
+  stopNormal: 40, // 보통 타구 때 멈추는 시간(ms)
+  stopMinQ: 0.35, // 타구 질이 이보다 낮으면(빗맞음) 멈추지 않음. 파울도 멈추지 않음
+  meterRange: 0.15, // 타이밍 미터 끝이 몇 초 차이인지
+  meterPerfect: 0.03, // 이 안이면 '완벽!'(초)
+  meterGood: 0.07, // 이 안이면 '조금 빠름/늦음'(초)
+  meterShowMs: 1200, // 타이밍 미터를 보여주는 시간(ms)
+  precMiss: 0.14, // 정밀 타격: 탭이 공에서 이 거리(m)보다 멀면 헛스윙
+  precSweet: 0.04, // 이 거리(m) 안이면 정확히 맞힘
+  precSweetBonus: 0.12, // 정확히 맞혔을 때 타구 질 보너스(타구가 더 셈)
+  precOffPenalty: 0.15, // 벗어날수록 타구 질 감점(헛스윙 거리에서 최대)
+  precLoftZone: 0.35, // 위/아래로 헛스윙 거리의 이 비율보다 벗어나면 땅볼/뜬공 쪽으로
+  precLoftChance: 0.75, // 그때 땅볼(탭이 공보다 위)/뜬공(아래)으로 바뀔 확률
+};
+// 정밀 타격: 내가 탭한 곳이 공(홈플레이트를 지나는 자리)에서 얼마나 벗어났는지(m). 꺼져 있으면 null
+function precisionError() {
+  if (!SETTINGS.precisionBat || pitcherMode || !swing.tap) return null;
+  const end = pitchPos(pitch, 1),
+    W = innerWidth,
+    H = innerHeight;
+  const toScreen = (x, y) => {
+    const v = new THREE.Vector3(x, y, 0).project(camera);
+    return [((v.x + 1) / 2) * W, ((1 - v.y) / 2) * H];
+  };
+  const b = toScreen(end.x, end.y),
+    r = toScreen(end.x + 0.1, end.y),
+    u = toScreen(end.x, end.y + 0.1),
+    pxX = Math.hypot(r[0] - b[0], r[1] - b[1]) / 0.1 || 1,
+    pxY = Math.hypot(u[0] - b[0], u[1] - b[1]) / 0.1 || 1;
+  const ex = (swing.tap.x - b[0]) / pxX,
+    ey = -(swing.tap.y - b[1]) / pxY; // +: 탭이 공보다 위
+  swing.tapWorld = { x: end.x + ex, y: end.y + ey };
+  return { ex, ey, dist: Math.hypot(ex, ey) };
+}
+// 히트 스톱: 맞힌 순간 화면을 아주 잠깐 멈춘다
+function hitStop(k, q) {
+  if (k === 'foul' || q < HIT_FEEL.stopMinQ) return;
+  hitStopEnd = lastFrameT + (q > 0.78 ? HIT_FEEL.stopStrong : HIT_FEEL.stopNormal);
+}
+
 // 스윙 방식: 'c' 정확, 'p' 강공
 let swingMode = 'c';
 // 노림수: 0 없음, 1 직구, 2 변화구
@@ -24,6 +66,12 @@ function resolveSwing() {
   const d = (now - (pitch.t0 + pitch.t.d)) / 1000 / (pitcherMode ? 1 : level().swingWindow),
     ad = Math.abs(d),
     off = Math.hypot(pitch.xT / ZONE_HALF_W, (pitch.yT - 0.8) / 0.3);
+  if (!pitcherMode) showTimingMeter(d);
+  const prec = precisionError();
+  if (prec && prec.dist > HIT_FEEL.precMiss) {
+    swing.miss = true; // 정밀 타격: 공에서 너무 먼 곳을 탭
+    return;
+  }
   if (
     ad > (swing.bunt ? 0.1 : swingMode === 'p' ? 0.105 : 0.13) ||
     off > 1.5 ||
@@ -44,7 +92,12 @@ function resolveSwing() {
         (swingMode === 'c' ? 0.03 : 0) +
         randRange(-0.08, 0.08) -
         (pitch.warp ? 0.14 : 0) +
-        (pitcherMode ? level().aiQuality : 0),
+        (pitcherMode ? level().aiQuality : 0) +
+        (prec
+          ? prec.dist <= HIT_FEEL.precSweet
+            ? HIT_FEEL.precSweetBonus
+            : (-HIT_FEEL.precOffPenalty * (prec.dist - HIT_FEEL.precSweet)) / (HIT_FEEL.precMiss - HIT_FEEL.precSweet)
+          : 0),
       0,
       1,
     );
@@ -73,6 +126,12 @@ function resolveSwing() {
           : lr < 0.85
             ? 'fly'
             : 'line';
+  // 정밀 타격: 공보다 위를 탭하면 땅볼, 아래를 탭하면 뜬공이 되기 쉽다
+  if (prec) {
+    const v = prec.ey / HIT_FEEL.precMiss;
+    if (v > HIT_FEEL.precLoftZone && rand() < HIT_FEEL.precLoftChance) loft = 'ground';
+    else if (v < -HIT_FEEL.precLoftZone && rand() < HIT_FEEL.precLoftChance) loft = 'fly';
+  }
   if (loft === 'ground') D = Math.min(D * 0.7, 200);
   const alp = ((loft === 'fly' ? randRange(30, 45) : randRange(11, 18)) * Math.PI) / 180;
   let k,
@@ -230,6 +289,7 @@ function resolveSwing() {
   replayT = 0;
   zone.visible = false;
   batCrack();
+  hitStop(k, q);
   if (k === 'hr') tone(880, 0.4, 0.1, 'triangle');
   hit.dist = 0;
   {
