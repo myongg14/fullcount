@@ -562,3 +562,63 @@ function nextHalf() {
   pitcherMode = !pitcherMode;
   if (!pitcherMode) myStamina = Math.min(100, myStamina + 30);
 }
+// 경기를 그만두고 타이틀 화면으로 돌아간다(일시정지 창의 '처음으로')
+function backToTitle() {
+  if (isReplay) endReplay();
+  tweens.length = 0;
+  // 홈런 베이스 돌기 중이었으면 타자를 타석으로
+  trot = null;
+  bat.visible = true;
+  batterRig.root.position.set(-0.78 * batSide, 0, 0.1);
+  batterRig.root.rotation.z = 0;
+  batterAnim(-1);
+  // 공·주자·연출 정리
+  swing = null;
+  hit = null;
+  steal = null;
+  stealReq = false;
+  extraBase = null;
+  pickoffBase = -1;
+  cpuStealPlan = false;
+  pendingRuns = 0;
+  bases = [0, 0, 0];
+  ball.visible = false;
+  shadow.visible = false;
+  pitchMark.visible = false;
+  zone.visible = false;
+  clearTrail();
+  slowUntil = 0;
+  fwEnd = 0;
+  shake = 0;
+  hbpUntil = 0;
+  benchClearT = -1e9;
+  isSeason = false;
+  derby = false;
+  derbyQueued = false;
+  // 투수·수비수 제자리로
+  pitcherMode = false;
+  pickEnd();
+  pitcherRoot.visible = true;
+  umpireRig.root.visible = false;
+  fielders.forEach(f => {
+    f.g.position.copy(f.h);
+    f.g.rotation.set(0, 0, 0);
+    readyPose(f.r);
+  });
+  camera.zoom = 1;
+  camera.updateProjectionMatrix();
+  setTimeOfDay(3);
+  // 화면 정리
+  aimPointer = null;
+  aimEl.style.display = 'none';
+  ['hud', 'end', 'season-modal', 'hof', 'replay-tag'].forEach(id => ($(id).style.display = 'none'));
+  windEl.style.display = 'none';
+  $('info').textContent = '';
+  $('hint').textContent = '';
+  $('banner').classList.remove('show');
+  $('title').style.display = '';
+  phase = 'title';
+  updateHud();
+  updateControls();
+  cardUpd();
+}

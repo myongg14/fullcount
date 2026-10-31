@@ -79,6 +79,17 @@
   <div class="cta" id="hof-next">기록실 닫기</div>
 </div>
 
+<!-- 일시정지 버튼(오른쪽 위)과 일시정지 창 -->
+<button id="pauseBtn" aria-label="일시정지">❚❚</button>
+<div class="ov" id="pause">
+  <h1>일시정지</h1>
+  <button class="menu-btn" id="resumeBtn">▶ 이어하기</button>
+  <button class="menu-btn" id="toTitleBtn">처음으로</button>
+</div>
+
+<!-- 초당 프레임 수(PERF.showFps 또는 주소 끝 ?fps 일 때만) -->
+<div id="fps"></div>
+
 <!-- 3D 라이브러리(three.js r128) → 게임 코드. 순서가 중요하다(README 참고) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/core.js"></script>

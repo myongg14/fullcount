@@ -119,6 +119,8 @@ BASES.forEach(b => add(new THREE.BoxGeometry(0.4, 0.1, 0.4), lambertMat(0xffffff
   [Math.PI / 4, 42.4, -42.4],
   [(3 * Math.PI) / 4, -42.4, -42.4],
 ].forEach(l => add(new THREE.BoxGeometry(120, 0.02, 0.15), lambertMat(0xffffff), l[1], 0.06, l[2], 0, l[0]));
+// 여기서부터 만드는 구장 구조물(담장·관중석·조명탑·건물·광고판·관중·전광판)은 그림자를 받지도 드리우지도 않는다(성능)
+const STATIC_FROM = scene.children.length;
 // 각도(도)에 따른 담장까지 거리(m), 3D 구장 모양용
 const fenceMeters = a => 122 - 24 * (Math.abs(a) / 45) ** 1.5;
 // 담장 모양을 따라 휘어지는 띠(담장·관중석·흙길)를 만든다
@@ -570,8 +572,16 @@ function placeSBInner(t) {
   }
 }
 // 전광판을 다시 그린다(오류가 나도 게임은 계속)
+// 전광판을 마지막으로 그린 내용 표시
+let boardKey = '';
 function boardUpd() {
   try {
+    // 내용이 바뀌었을 때만 다시 그린다(1024×512 텍스처를 매번 GPU로 보내지 않게)
+    const key = JSON.stringify([totalInnings, inning, pitcherMode, curBatter(), myRuns, oppRuns, score, myLine, oppLine, myHits, oppHits,
+      myErrors, oppErrors, TEAM_NAMES, balls, strikes, outs, bases, curHand(), curPitcher, pitch && pitch.kmh, strikeouts, homers, LINEUPS,
+      document.fonts ? document.fonts.status : '']);
+    if (key === boardKey) return;
+    boardKey = key;
     boardDraw();
   } catch (e) {
     console.error('scoreboard', e);
@@ -716,3 +726,12 @@ function boardDraw() {
 function orZero(x) {
   return x || 0;
 }
+// 움직이지 않는 구장 구조물은 그림자 계산에서 뺀다(fx가 다시 켜지 않게 userData.nf 표시)
+scene.children.slice(STATIC_FROM).forEach(root =>
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    o.userData.nf = 1;
+    o.castShadow = false;
+    o.receiveShadow = false;
+  }),
+);

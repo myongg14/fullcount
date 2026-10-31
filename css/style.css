@@ -699,3 +699,70 @@ canvas {
   cursor: pointer;
   padding: 8px 20px;
 }
+
+/* 일시정지 버튼: 오른쪽 위 구석, 손가락으로 누르기 쉽게 48px */
+#pauseBtn {
+  position: fixed;
+  right: 8px;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  width: 48px;
+  height: 48px;
+  display: none;
+  z-index: 60;
+  font: inherit;
+  font-size: 18px;
+  color: var(--cream);
+  background: rgba(20, 26, 60, 0.88);
+  border: 2px solid var(--gold);
+  border-radius: 12px;
+  touch-action: manipulation;
+}
+/* 타자 카드·리플레이 표시는 일시정지 버튼 왼쪽으로 */
+#card,
+#replay-tag {
+  right: 64px;
+}
+/* 일시정지 창 */
+#pause {
+  display: none;
+  z-index: 250;
+  background: rgba(5, 8, 20, 0.86);
+}
+/* 일시정지 중에는 가운데 배너를 숨겨 창 글자와 겹치지 않게 */
+body.paused #banner {
+  visibility: hidden;
+}
+#pause .menu-btn {
+  font: inherit;
+  font-size: 24px;
+  min-width: 240px;
+  min-height: 56px;
+  color: var(--cream);
+  background: rgba(20, 26, 60, 0.9);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: 10px 24px;
+  touch-action: manipulation;
+}
+#pause #resumeBtn {
+  background: var(--gold);
+  color: var(--navy);
+}
+/* 일시정지 중에는 화면 글자 애니메이션도 멈춘다 */
+body.paused * {
+  animation-play-state: paused !important;
+}
+/* FPS 표시 */
+#fps {
+  position: fixed;
+  right: 8px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  display: none;
+  z-index: 70;
+  font-size: 13px;
+  color: #5fd16a;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 4px;
+  padding: 2px 6px;
+  pointer-events: none;
+}

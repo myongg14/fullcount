@@ -302,7 +302,7 @@ function diveUI() {
 }
 // 다이빙 캐치를 시도한다
 function tryDive() {
-  if (!diveOK()) return;
+  if (paused || !diveOK()) return;
   const h = hit,
     f = fielders[h.fi],
     L = h.L,
