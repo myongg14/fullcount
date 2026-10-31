@@ -619,6 +619,7 @@ function backToTitle() {
   batterAnim(-1);
   // 리그 중이었으면 저장하고 한 경기 모드의 내 팀으로
   if (league) exitLeague();
+  else restoreSingleTeam(); // 한 경기에서 고른 KBO 팀 → 원래 내 팀
   // 공·주자·연출 정리
   myHome = false;
   catchRing = null;

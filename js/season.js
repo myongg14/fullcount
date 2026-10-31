@@ -31,6 +31,7 @@ function applyOpp() {
   } else {
     TEAM_NAMES.o = 'BEARS';
     TEAM_COLORS.o = [0x14235a, 0x14235a, 0xdedbd0, 'BEARS', '#fff'];
+    applyMatchTeams(); // 타이틀에서 고른 두 팀(안 고르면 예전 그대로)
   }
 }
 // 예전 9경기 시즌은 KBO 리그(league.js)로 바뀌었다. 다른 파일에서 부르는 이름은 리그로 이어 준다
@@ -256,6 +257,7 @@ $('hof-next').addEventListener('pointerdown', e => {
     if (league) {
       startOffseason();
       showHub();
+      openSeasonEnd(); // 상금 → 나이·성장·은퇴 → 드래프트 → FA → 다음 시즌
     } else backToTitle();
     return;
   }
