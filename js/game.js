@@ -440,6 +440,7 @@ function applyHit(k) {
     else myHits++;
     newBat();
   } else if (k === 'hr') {
+    if (!pitcherMode) leagueHighlight('hr');
     r = occupied(bases[0]) + occupied(bases[1]) + occupied(bases[2]) + 1;
     bases = [0, 0, 0];
     hits++;
