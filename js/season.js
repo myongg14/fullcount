@@ -16,6 +16,11 @@ let seasonDraws = 0;
 let seasonLast = '';
 // 시즌이면 이번 상대 팀 이름·색을 정한다
 function applyOpp() {
+  // KBO 리그 경기면 오늘 상대·선발을 리그 일정에서
+  if (isSeason && league) {
+    leagueApplyMatch();
+    return;
+  }
   applyOppRoster(); // 시즌이면 상대 팀 자기 선수단(타순·투수진), 아니면 예전 상대
   if (isSeason) {
     const o = SEASON_OPPS[(seasonGame - 1) % SEASON_OPPS.length];
@@ -28,136 +33,26 @@ function applyOpp() {
     TEAM_COLORS.o = [0x14235a, 0x14235a, 0xdedbd0, 'BEARS', '#fff'];
   }
 }
-// 페넌트레이스 창의 성적·다음 상대를 그린다
+// 예전 9경기 시즌은 KBO 리그(league.js)로 바뀌었다. 다른 파일에서 부르는 이름은 리그로 이어 준다
+// 리그 화면을 다시 그린다
 function updateSeasonModal() {
-  const o = SEASON_OPPS[(seasonGame - 1) % SEASON_OPPS.length],
-    g = seasonWins + seasonLosses;
-  $('season-info').innerHTML =
-    (seasonLast ? `<small style="color:#9fb0e8">지난 경기: ${seasonLast}</small><br>` : '') +
-    `<b>성적</b> ${seasonWins}승 ${seasonLosses}패${seasonDraws ? ' ' + seasonDraws + '무' : ''} (승률 ${(g ? seasonWins / g : 0).toFixed(3)})<br><b>다음 경기 ${seasonGame}/${SEASON_LEN}</b> · VS ${o.n}<br><span style="color:#9fb0e8;font-size:14px">${SEASON_LEN}경기 중 6승 이상이면 페넌트레이스 우승!</span>`;
-  $('season-next').textContent = seasonGame === 1 ? '시즌 개막!' : '다음 경기 시작';
-  const closed = marketOpen();
-  $('btn-market').textContent = '🔁 이적 시장' + (closed ? ' (마감)' : ` (남은 이적 ${TRADE_TUNING.perSeason - tradesUsed}번)`);
+  if (league) renderHub();
 }
-// ---------- 시즌 저장(며칠에 걸쳐 하기) ----------
-const SEASON_KEY = 'nb3_season';
-// 시즌 진행(몇 번째 경기, 승패, 선수 기록)을 기기에 저장한다(못 하면 넘어간다)
+// 시즌(리그) 저장
 function saveSeason() {
-  try {
-    localStorage.setItem(
-      SEASON_KEY,
-      JSON.stringify({
-        game: seasonGame,
-        w: seasonWins,
-        l: seasonLosses,
-        d: seasonDraws,
-        last: seasonLast,
-        stats: seasonStats,
-        roster: rosterState(), // 선수단(이적 결과)도 같이
-      }),
-    );
-  } catch (e) {}
-  renderSeasonButton();
+  saveLeague();
 }
-// 저장된 시즌(없거나 깨졌으면 null)
-function loadSeasonSave() {
-  try {
-    const s = JSON.parse(localStorage.getItem(SEASON_KEY));
-    return s && s.game >= 1 && s.game <= SEASON_LEN && s.stats && s.stats.b ? s : null;
-  } catch (e) {
-    return null;
-  }
-}
-function clearSeasonSave() {
-  try {
-    localStorage.removeItem(SEASON_KEY);
-  } catch (e) {}
-  renderSeasonButton();
-}
-// 저장된 시즌이 있으면 타이틀에 '시즌 이어하기' 버튼
+// 타이틀의 '시즌 이어하기' 버튼
 function renderSeasonButton() {
-  const s = loadSeasonSave();
-  $('btn-cont').style.display = s ? 'inline-block' : 'none';
-  if (s) $('btn-cont').textContent = `▶ 시즌 이어하기 (${s.game}/${SEASON_LEN}경기 · ${s.w}승 ${s.l}패)`;
+  renderLeagueButton();
 }
-// 저장된 시즌을 이어서 페넌트레이스 창을 연다
-function continueSeason() {
-  const s = loadSeasonSave();
-  if (!s) return;
-  ssReset();
-  if (Array.isArray(s.stats.b)) {
-    // 예전 저장(타순 순서별 기록) → 선수 id별로 옮긴다
-    s.stats.b.forEach((x, i) => LINEUPS.m[i] && Object.assign(ssB(LINEUPS.m[i]), x));
-    (s.stats.p || []).forEach((x, i) => PITCHERS[i] && Object.assign(ssP(PITCHERS[i]), x));
-  } else {
-    seasonStats.b = s.stats.b || {};
-    seasonStats.p = s.stats.p || {};
-    seasonStats.trades = s.stats.trades || [];
-  }
-  ['rs', 'ra', 'dv'].forEach(k => (seasonStats[k] = s.stats[k] || 0));
-  if (s.roster) applyRosterState(s.roster);
-  isSeason = true;
-  seasonGame = s.game;
-  seasonWins = s.w;
-  seasonLosses = s.l;
-  seasonDraws = s.d;
-  seasonLast = s.last || '';
-  $('title').style.display = 'none';
-  updateSeasonModal();
-  $('season-modal').style.display = 'flex';
-}
-// 새 시즌을 시작하고 페넌트레이스 창을 연다(저장된 시즌이 있으면 확인 후 지운다)
+// 새 시즌: 내 팀 고르기
 function startSeasonModal() {
-  const saved = loadSeasonSave();
-  if (saved && !confirm(`저장된 시즌(${saved.game}경기째, ${saved.w}승 ${saved.l}패)이 있어요.\n새 시즌을 시작하면 지워져요. 새로 시작할까요?`))
-    return;
-  clearSeasonSave();
-  // 이적으로 선수단이 바뀌어 있으면 유지할지 묻는다
-  if (rosterChanged())
-    askChoice('새 시즌 선수단', '지난 이적으로 바뀐 선수단을 그대로 쓸까요?', ['선수단 유지', '처음 선수단으로'], k =>
-      beginNewSeason(k === 0),
-    );
-  else beginNewSeason(true);
+  startLeagueSetup();
 }
-// 새 시즌 시작(keep: 선수단 유지)
-function beginNewSeason(keep) {
-  if (!keep) resetRoster();
-  newSeasonMarket();
-  ssReset();
-  isSeason = true;
-  seasonGame = 1;
-  seasonWins = 0;
-  seasonLosses = 0;
-  seasonDraws = 0;
-  seasonLast = '';
-  saveSeason();
-  $('title').style.display = 'none';
-  updateSeasonModal();
-  $('season-modal').style.display = 'flex';
-}
-// 시즌 경기 결과를 기록하고 다음 경기 또는 시즌 종료로 간다
-function seasonResult() {
-  ssGame();
-  const r = myRuns > oppRuns ? '승' : myRuns < oppRuns ? '패' : '무',
-    o = SEASON_OPPS[(seasonGame - 1) % SEASON_OPPS.length];
-  if (r === '승') seasonWins++;
-  else if (r === '패') seasonLosses++;
-  else seasonDraws++;
-  seasonLast = `${seasonGame}경기 vs ${o.n} ${myRuns}:${oppRuns} ${r}`;
-  seasonGame++;
-  if (seasonGame > SEASON_LEN) {
-    isSeason = false;
-    clearSeasonSave(); // 시즌이 끝나면 저장 지우기
-    keepRoster(); // 다음 시즌에 '선수단 유지'를 고를 수 있게
-    $('fs').textContent = `${seasonWins}승 ${seasonLosses}패${seasonDraws ? ' ' + seasonDraws + '무' : ''}`;
-    $('fd').textContent = seasonWins >= 6 ? '🏆 페넌트레이스 우승!' : '가을야구 진출 실패...';
-    $('fb').textContent = '시즌 종료 · 마지막 경기 ' + seasonLast;
-    showHof(seasonWins >= 6);
-    return;
-  }
-  saveSeason(); // 경기가 끝날 때마다 저장
-  updateSeasonModal();
-  $('season-modal').style.display = 'flex';
+// 저장된 시즌 이어하기
+function continueSeason() {
+  continueLeague();
 }
 // 홈런더비 중인지
 let derby = false;
@@ -203,66 +98,99 @@ function ssReset() {
   seasonStats = { b: {}, p: {}, gp: {}, rs: 0, ra: 0, dv: 0, trades: [] };
 }
 ssReset();
-// 타자 p(타순 배열)의 시즌 기록 칸(없으면 만든다)
+// 타자 p(타순 배열)의 시즌 기록 칸(없으면 만든다): 타수·안타·홈런·타점·도루
 function ssB(p) {
   const id = p[5] || p[0];
-  if (!seasonStats.b[id]) seasonStats.b[id] = { n: p[0], pos: p[1], ab: 0, h: 0, hr: 0 };
+  if (!seasonStats.b[id]) seasonStats.b[id] = { n: p[0], pos: p[1], ab: 0, h: 0, hr: 0, rbi: 0, sb: 0 };
   seasonStats.b[id].n = p[0];
   return seasonStats.b[id];
 }
-// 투수 P의 시즌 기록 칸(없으면 만든다)
+// 투수 P의 시즌 기록 칸(없으면 만든다): 승·패·세이브·탈삼진·등판·잡은 아웃·자책점
 function ssP(P) {
   const id = P.id || P.n;
-  if (!seasonStats.p[id]) seasonStats.p[id] = { n: P.n, w: 0, k: 0, g: 0 };
+  if (!seasonStats.p[id]) seasonStats.p[id] = { n: P.n, w: 0, l: 0, sv: 0, k: 0, g: 0, outs: 0, er: 0 };
   seasonStats.p[id].n = P.n;
   return seasonStats.p[id];
 }
-// 시즌 타격 기록을 더한다
+// 이번 타석의 타자·투수(타점·자책점을 나중에 붙이려고 기억)
+let ssAtBat = null;
+// 시즌 타격 기록을 더한다(리그에서는 두 팀 모두)
 function ssBat(k) {
-  if (!isSeason || pitcherMode || k === 'foul') return;
-  const p = LINEUPS.m[curBatter()];
+  if (!isSeason || k === 'foul') return;
+  const p = LINEUPS[pitcherMode ? 'o' : 'm'][curBatter()];
   if (!p) return;
   const x = ssB(p);
+  ssAtBat = { x, P: activePitcher() };
   if (['1b', '2b', '3b', 'hr', 'bh'].includes(k)) {
     x.ab++;
     x.h++;
     if (k === 'hr') x.hr++;
   } else if (k === 'go' || k === 'fo') x.ab++;
 }
-// 시즌 삼진 기록을 더한다
+// 타점(applyHit에서 낸 점수)
+function ssRbi(r) {
+  if (isSeason && ssAtBat && r > 0) ssAtBat.x.rbi += r;
+}
+// 시즌 삼진 기록을 더한다(타자 타수, 투수 탈삼진)
 function ssK() {
   if (!isSeason) return;
-  if (pitcherMode) ssP(PITCHERS[curPitcher]).k++;
-  else {
-    const p = LINEUPS.m[curBatter()];
-    if (p) ssB(p).ab++;
-  }
+  const p = LINEUPS[pitcherMode ? 'o' : 'm'][curBatter()];
+  if (p) ssB(p).ab++;
+  ssP(activePitcher()).k++;
 }
-// 한 경기가 끝나면 시즌 득실점과 투수 등판·승리를 더한다(가장 많이 던진 투수가 승리)
+// 이번 경기 투수별 잡은 아웃(승·패·세이브를 정할 때)
+let gameOuts = {};
+// 아웃을 잡은 투수 기록
+function ssOuts(n) {
+  if (!isSeason || !twoWay) return;
+  const P = activePitcher();
+  ssP(P).outs += n;
+  gameOuts[P.id] = (gameOuts[P.id] || 0) + n;
+}
+// 반 이닝에 낸 점수를 지금 마운드 투수의 자책점으로
+function ssRuns(n) {
+  if (isSeason && twoWay && n > 0) ssP(activePitcher()).er += n;
+}
+// 도루 성공(주자 칸의 값 = 타순+1)
+function ssSteal(tag) {
+  if (!isSeason || !tag) return;
+  const p = LINEUPS[pitcherMode ? 'o' : 'm'][tag - 1];
+  if (p) ssB(p).sb++;
+}
+// 한 경기가 끝나면: 등판, 승리·패전(가장 많은 아웃을 잡은 투수), 세이브(3점 차 이내, 마지막 불펜), 득실점
 function ssGame() {
   if (!seasonStats) return;
   seasonStats.rs += myRuns;
   seasonStats.ra += oppRuns;
-  let best = null;
-  PITCHERS.forEach(P => {
-    const n = seasonStats.gp[P.id] || 0;
-    if (!n) return;
-    ssP(P).g++;
-    if (!best || n > (seasonStats.gp[best.id] || 0)) best = P;
-  });
-  if (myRuns > oppRuns && best) ssP(best).w++;
-  seasonStats.gp = {};
+  const side = (list, won, lost) => {
+    // 나온 순서대로(마지막 투수 = 세이브 후보)
+    const used = Object.keys(gameOuts)
+      .map(id => list.find(P => P.id === id))
+      .filter(Boolean);
+    used.forEach(P => ssP(P).g++);
+    if (!used.length) return;
+    const top = used.reduce((a, P) => (gameOuts[P.id] > gameOuts[a.id] ? P : a));
+    if (won) {
+      ssP(top).w++;
+      const last = used[used.length - 1];
+      if (last !== top && last.role === 'RP' && Math.abs(myRuns - oppRuns) <= 3) ssP(last).sv++;
+    }
+    if (lost) ssP(top).l++;
+  };
+  side(PITCHERS, myRuns > oppRuns, myRuns < oppRuns);
+  if (cpuStaff) side(cpuStaff, oppRuns > myRuns, oppRuns < myRuns);
+  gameOuts = {};
 }
 // 시즌 종료 기록실·명예의 전당 화면
 function showHof(champ) {
   const f = x => (x.ab ? (x.h / x.ab).toFixed(3).replace(/^0/, '') : '.000'),
     // 지금 내 선수(타순+후보)와 시즌 중 기록이 있는 선수(이적해 간 선수 포함)
     bt = [...LINEUPS.m, ...MY_BENCH].map(p => ssB(p)).concat(
-      Object.values(seasonStats.b).filter(x => ![...LINEUPS.m, ...MY_BENCH].some(p => ssB(p) === x)),
+      (leagueEnding ? [] : Object.values(seasonStats.b)).filter(x => ![...LINEUPS.m, ...MY_BENCH].some(p => ssB(p) === x)),
     ),
     av = bt.filter(x => x.ab > 0).sort((a, b) => b.h / b.ab - a.h / a.ab || b.h - a.h)[0],
     hk = [...bt].sort((a, b) => b.hr - a.hr || b.h - a.h)[0],
-    pt = Object.values(seasonStats.p).sort(
+    pt = (leagueEnding ? PITCHERS.map(ssP) : Object.values(seasonStats.p)).sort(
       (a, b) => b.w - a.w || b.k - a.k || b.g - a.g,
     )[0],
     g = seasonWins + seasonLosses,
@@ -278,8 +206,9 @@ function showHof(champ) {
     localStorage.setItem('nb3_hof', JSON.stringify(H));
   } catch (e) {}
   $('hof-in').innerHTML =
-    `<div style="height:62vh"></div><div class="big">${champ ? '🏆' : '⚾'}</div><h1>${champ ? '페넌트레이스 우승!' : '시즌 종료'}</h1><p style="color:#9fb0e8">${champ ? '당신의 팀이 정상에 올랐습니다' : '내년엔 더 높이 날아올라요'}</p>
+    `<div style="height:62vh"></div><div class="big">${champ ? '🏆' : '⚾'}</div><h1>${champ ? (leagueEnding ? '한국시리즈 우승!' : '페넌트레이스 우승!') : '시즌 종료'}</h1><p style="color:#9fb0e8">${champ ? '당신의 팀이 정상에 올랐습니다' : leagueEnding ? `한국시리즈 우승: ${teamName(leagueEnding.champ)}` : '내년엔 더 높이 날아올라요'}</p>
  <h3>팀 성적</h3><div class="card"><b>${seasonWins}승 ${seasonLosses}패${seasonDraws ? ' ' + seasonDraws + '무' : ''}</b> · 승률 ${pc}<br>득점 ${seasonStats.rs} · 실점 ${seasonStats.ra} · 득실차 ${seasonStats.rs - seasonStats.ra > 0 ? '+' : ''}${seasonStats.rs - seasonStats.ra}</div>
+${leagueEnding ? `<h3>🏅 리그 타이틀</h3><div class="card">${leagueEnding.awards.map(a => `${a.title} <b>${a.name}</b> (${a.team}) ${a.v}`).join('<br>') || '기록 없음'}</div>` : ''}
  <h3>🥇 타율왕</h3><div class="card">${av ? `<b>${av.n}</b> (${av.pos})<br>타율 ${f(av)} · ${av.ab}타수 ${av.h}안타` : '기록 없음'}</div>
  <h3>💥 홈런왕</h3><div class="card">${hk && hk.hr ? `<b>${hk.n}</b> (${hk.pos})<br>${hk.hr}홈런` : '홈런 기록 없음'}</div>
  <h3>⚾ 다승왕</h3><div class="card">${pt && (pt.w || pt.g) ? `<b>${pt.n}</b><br>${pt.w}승 · 탈삼진 ${pt.k} · ${pt.g}경기 등판` : '등판 기록 없음'}</div>
@@ -315,6 +244,12 @@ $('hof-next').addEventListener('pointerdown', e => {
   e.preventDefault();
   e.stopPropagation();
   $('hof').style.display = 'none';
+  // 리그 시즌이 끝났으면 타이틀로
+  if (leagueEnding) {
+    leagueEnding = null;
+    backToTitle();
+    return;
+  }
   $('end').style.display = 'flex';
 });
 $('btn-cont').addEventListener('pointerdown', e => {
@@ -323,4 +258,3 @@ $('btn-cont').addEventListener('pointerdown', e => {
   unlockAudio();
   continueSeason();
 });
-renderSeasonButton();

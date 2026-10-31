@@ -578,7 +578,7 @@ function boardUpd() {
   try {
     // 내용이 바뀌었을 때만 다시 그린다(1024×512 텍스처를 매번 GPU로 보내지 않게)
     const key = JSON.stringify([totalInnings, inning, pitcherMode, curBatter(), myRuns, oppRuns, score, myLine, oppLine, myHits, oppHits,
-      myErrors, oppErrors, TEAM_NAMES, balls, strikes, outs, bases, curHand(), curPitcher, activePitcher().n, pitch && pitch.kmh, strikeouts, homers, LINEUPS,
+      myErrors, oppErrors, TEAM_NAMES, balls, strikes, outs, bases, curHand(), curPitcher, activePitcher().n, myHome, pitch && pitch.kmh, strikeouts, homers, LINEUPS,
       document.fonts ? document.fonts.status : '']);
     if (key === boardKey) return;
     boardKey = key;
@@ -704,7 +704,7 @@ function boardDraw() {
   g.fillStyle = '#dfe9ff';
   g.font = '24px Jua, sans-serif';
   g.fillText(
-    `${I}회${P ? ' 말' : ' 초'}  타자 ${LINEUPS[batting][cur][0]}(${curHand() < 0 ? '좌' : '우'}타)`,
+    `${I}회${isBottom() ? ' 말' : ' 초'}  타자 ${LINEUPS[batting][cur][0]}(${curHand() < 0 ? '좌' : '우'}타)`,
     512,
     376,
   );

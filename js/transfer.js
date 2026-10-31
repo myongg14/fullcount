@@ -511,7 +511,12 @@ $('luPitchers').addEventListener('click', e => {
 });
 $('luDone').addEventListener('click', () => {
   $('lineup').style.display = 'none';
-  if (isSeason) saveSeason();
+  // 리그: 고른 투수를 오늘 선발로, 타순을 리그 선수단에 저장
+  if (league) {
+    league.myStarter = PITCHERS[curPitcher].id;
+    saveLeague();
+    renderHub();
+  } else if (isSeason) saveSeason();
 });
 
 // ---------- 두 가지 중 고르기 창 ----------

@@ -63,6 +63,7 @@ function runTo(i, j, dur, done) {
 }
 // 주자 아웃 하나(3아웃이면 공수 교대). 이닝이 끝나면 true
 function runnerOut() {
+  ssOuts(1);
   outs++;
   if (outs >= 3) {
     outs = 0;
@@ -96,6 +97,7 @@ function endSteal(ip) {
   if (ip || ok) {
     bases[i + 1] = rv;
     r.t = ip ? '' : '도루 성공!';
+    if (!ip) ssSteal(rv);
   } else {
     r.t = '도루 실패!';
     throwBall(new THREE.Vector3(0, 1.1, 1), basePoint(i + 1), 550);

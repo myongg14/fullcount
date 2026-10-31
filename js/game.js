@@ -46,6 +46,10 @@ let myHits = 0;
 let oppHits = 0;
 // 번트를 준비했는지
 let buntReq = false;
+// 내 팀이 홈 팀인지(홈이면 초에 수비, 말에 공격). 한 경기 모드는 항상 원정
+let myHome = false;
+// 지금이 말(홈 팀 공격)인지
+const isBottom = () => (myHome ? !pitcherMode : pitcherMode);
 // 지금 타석에 선 타자 번호(0~8)
 const curBatter = () => (pitcherMode ? oppBatter : myBatter);
 try {
@@ -271,7 +275,7 @@ function nextPitch() {
     if (!pitcherMode && inning <= totalInnings) organ('charge');
     if (inning <= totalInnings)
       showBanner(
-        inning + '회' + (twoWay ? (pitcherMode ? ' 말 · 수비' : ' 초 · 공격') : ' 시작'),
+        inning + '회' + (twoWay ? (isBottom() ? ' 말' : ' 초') + (pitcherMode ? ' · 수비' : ' · 공격') : ' 시작'),
         inning === totalInnings ? '마지막 이닝!' : twoWay ? '공수교대' : '',
         true,
       );
@@ -321,6 +325,7 @@ function ibbDo() {
 }
 // 아웃을 n개 더하고 3아웃이면 공수 교대
 function addOuts(n) {
+  ssOuts(n);
   outs += n;
   if (outs >= 3) {
     outs = 0;
@@ -515,6 +520,7 @@ function applyHit(k) {
       addOuts(1);
     }
   }
+  ssRbi(r);
   if (inning === ih && pitcherMode === ph) pendingRuns = r;
   else {
     r = 0;
@@ -531,8 +537,9 @@ function endGame() {
     $('fd').textContent = myRuns > oppRuns ? '🎉 승리!' : myRuns < oppRuns ? '패배...' : '무승부';
     $('fb').textContent = '나 vs 상대';
     $('hud').style.display = 'none';
-    if (isSeason) {
-      seasonResult();
+    if (isSeason && league) {
+      ssGame();
+      leagueGameOver(myRuns, oppRuns);
       return;
     }
     $('end').style.display = 'flex';
@@ -577,19 +584,23 @@ function nextHalf() {
     inning++;
     return;
   }
+  ssRuns(score); // 반 이닝 점수를 마운드 투수 자책점으로
   if (pitcherMode) oppLine[inning - 1] = score;
   else myLine[inning - 1] = score;
-  if (pitcherMode) {
-    oppRuns += score;
+  if (pitcherMode) oppRuns += score;
+  else myRuns += score;
+  // 끝난 것이 말(홈 팀 공격)인지: 내가 홈이면 내 공격이 말
+  const bottomEnded = myHome ? !pitcherMode : pitcherMode,
+    homeRuns = myHome ? myRuns : oppRuns,
+    awayRuns = myHome ? oppRuns : myRuns;
+  if (bottomEnded) {
     inning++;
     if (inning > totalInnings && myRuns === oppRuns && totalInnings < 12) totalInnings++;
-  } else {
-    myRuns += score;
-    if (inning >= totalInnings && oppRuns > myRuns) {
-      score = 0;
-      inning = totalInnings + 1;
-      return;
-    }
+  } else if (inning >= totalInnings && homeRuns > awayRuns) {
+    // 마지막 이닝 초가 끝났을 때 홈 팀이 이기고 있으면 말 공격 없이 경기 끝
+    score = 0;
+    inning = totalInnings + 1;
+    return;
   }
   score = 0;
   pitcherMode = !pitcherMode;
@@ -605,7 +616,10 @@ function backToTitle() {
   batterRig.root.position.set(-0.78 * batSide, 0, 0.1);
   batterRig.root.rotation.z = 0;
   batterAnim(-1);
+  // 리그 중이었으면 저장하고 한 경기 모드의 내 팀으로
+  if (league) exitLeague();
   // 공·주자·연출 정리
+  myHome = false;
   catchRing = null;
   throwChoice = null;
   swing = null;

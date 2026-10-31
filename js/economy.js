@@ -17,6 +17,7 @@ const ECONOMY = {
   spBonus: 1.1, // 선발 투수
   minValue: 1, // 최소 몸값(억)
   salaryRate: 0.12, // 연봉 = 몸값 × 이 값
+  startMoney: [80, 150], // 시작 자금(억): 인기도 0.6 → 80억, 1.4 → 150억
 };
 // 타자 OVR = (컨택×0.35 + 파워×0.35 + 주력×0.15 + 수비×0.15) × 10
 const batterOvr = r => Math.round((r.con * 0.35 + r.pow * 0.35 + r.spd * 0.15 + r.def * 0.15) * 10);
@@ -85,3 +86,5 @@ function playerCard(x) {
   if (!r) return null;
   return { name: Array.isArray(x) ? x[0] : x.n || r.name, ovr: ovrOf(r), value: valueOf(r), salary: salaryOf(r), age: r.age, pot: r.pot, virtual: !!r.v, rec: r };
 }
+// 시작 자금(억 원): 인기 구단이 조금 더 많이
+const startMoney = t => Math.round(ECONOMY.startMoney[0] + ((t.pop - 0.6) / 0.8) * (ECONOMY.startMoney[1] - ECONOMY.startMoney[0]));
