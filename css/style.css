@@ -1463,3 +1463,87 @@ body.paused * {
 #ledger {
   z-index: 210;
 }
+
+/* 이적 시장(리그) */
+#market {
+  z-index: 215;
+}
+#choice {
+  z-index: 262;
+}
+.mk-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.mk-filters select {
+  font: inherit;
+  font-size: 16px;
+  min-height: 48px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 2px solid #3a4468;
+  background: #0c1433;
+  color: var(--cream);
+}
+.mk-cols2 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+}
+.pl-list.tall {
+  max-height: 52vh;
+}
+.pl b small {
+  font-size: 13px;
+  color: #9fb0e8;
+}
+.mk-detail {
+  background: #0c1433;
+  border: 2px solid #3a4f9a;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 16px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+.mk-detail h3 {
+  margin: 0 0 4px;
+  color: var(--gold);
+  font-size: 19px;
+}
+.mk-detail h3 small {
+  color: #9fb0e8;
+  font-size: 14px;
+}
+.mk-detail p {
+  margin: 6px 0;
+}
+.mk-detail b {
+  color: var(--gold);
+  font-weight: 400;
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 15px;
+}
+.bar-row .bar {
+  height: 12px;
+  border-radius: 6px;
+  background: #2a3358;
+  overflow: hidden;
+}
+.bar-row .bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+.bar-row em {
+  font-style: normal;
+  text-align: right;
+}

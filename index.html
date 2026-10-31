@@ -92,10 +92,6 @@
 <div id="season-modal">
   <h2>🏆 페넌트레이스</h2>
   <div class="box" id="season-info"></div>
-  <div class="season-btns">
-    <button id="btn-market" class="title-btn">🔁 이적 시장</button>
-    <button id="btn-lineup" class="title-btn">📋 타순 바꾸기</button>
-  </div>
   <div class="cta" id="season-next">경기 시작</div>
 </div>
 
@@ -133,22 +129,6 @@
       <button id="teReset">처음 이름으로 되돌리기</button>
       <button id="teClose">닫기</button>
     </div>
-  </div>
-</div>
-
-<!-- 이적 시장: 다른 팀을 골라 내 선수 1~2명 ↔ 상대 선수 1명, 또는 FA 영입 -->
-<div id="market" class="sheet">
-  <div class="sheet-box wide">
-    <h2>🔁 이적 시장</h2>
-    <div id="mkInfo" class="mk-note"></div>
-    <div id="mkTabs" class="tabs"></div>
-    <div class="mk-cols">
-      <div><h3>내 선수 (1~2명)</h3><div id="mkMine" class="pl-list"></div></div>
-      <div><h3>데려올 선수 (1명)</h3><div id="mkTheirs" class="pl-list"></div></div>
-    </div>
-    <div id="mkSum" class="mk-sum"></div>
-    <div id="mkMsg" class="mk-msg"></div>
-    <div class="te-btns"><button id="mkGo" class="te-main">제안</button><button id="mkClose">닫기</button></div>
   </div>
 </div>
 
@@ -203,6 +183,7 @@
       <button id="lgAuto">⏩ 이 경기 자동 진행</button>
       <button id="lgPostNext" class="te-main">⏩ 다음 결과 보기</button>
       <button id="lgEnd" class="te-main">🏆 시즌 마무리</button>
+      <button id="lgMarket">🔁 이적 시장</button>
       <button id="lgRoster">📋 선수단·선발</button>
       <button id="lgSched">📅 일정</button>
       <button id="lgLedger">💰 자금 내역</button>
@@ -217,6 +198,31 @@
     <h2>📅 일정</h2>
     <table id="scTable" class="lg-table"></table>
     <div class="te-btns"><button id="scClose" class="te-main">닫기</button></div>
+  </div>
+</div>
+
+<!-- 이적 시장(리그): 선수 목록(탭·걸러 보기·정렬)과 자세히(사기·팔기·방출) -->
+<div id="market" class="sheet">
+  <div class="sheet-box wide">
+    <h2>🔁 이적 시장</h2>
+    <p id="mkInfo" class="mk-note"></p>
+    <div id="mkTabs" class="tabs"></div>
+    <div class="mk-filters">
+      <select id="mkTeam" aria-label="팀"></select>
+      <select id="mkPos" aria-label="포지션">
+        <option value="">모든 포지션</option><option>C</option><option>1B</option><option>2B</option><option>SS</option><option>3B</option>
+        <option>LF</option><option>CF</option><option>RF</option><option>DH</option><option value="SP">선발 투수</option><option value="RP">불펜 투수</option>
+      </select>
+      <select id="mkAge" aria-label="나이"><option value="">모든 나이</option><option value="23">23세 이하</option><option value="27">27세 이하</option><option value="30">30세 이하</option></select>
+      <select id="mkPrice" aria-label="몸값"><option value="">모든 몸값</option><option value="0-10">10억 이하</option><option value="10-30">10~30억</option><option value="30-60">30~60억</option><option value="60-999">60억 이상</option></select>
+      <select id="mkSort" aria-label="정렬"><option value="ovr">OVR 순</option><option value="value">몸값 순</option><option value="age">나이 순</option><option value="perf">이번 시즌 성적 순</option></select>
+    </div>
+    <div class="mk-cols2">
+      <div id="mkList" class="pl-list tall"></div>
+      <div id="mkDetail" class="mk-detail"></div>
+    </div>
+    <p id="mkMsg" class="mk-msg"></p>
+    <div class="te-btns"><button id="mkClose" class="te-main">닫기</button></div>
   </div>
 </div>
 
@@ -264,6 +270,7 @@
 <script src="js/season.js"></script>
 <script src="js/transfer.js"></script>
 <script src="js/league.js"></script>
+<script src="js/market.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

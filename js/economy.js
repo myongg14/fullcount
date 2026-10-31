@@ -50,6 +50,7 @@ function recordOf(x) {
   const bat = Array.isArray(x),
     id = bat ? x[5] : x.id;
   if (KBO_PLAYERS[id]) return KBO_PLAYERS[id];
+  if (league && league.extra && league.extra[id]) return league.extra[id]; // 리그에서 만든 선수(가상 FA·신인)
   if (EST_RECORDS[id]) return EST_RECORDS[id];
   const found = kboFindByName(bat ? x[6] || x[0] : x.n0 || x.n, bat ? 'B' : 'P');
   let r;
