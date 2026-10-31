@@ -85,6 +85,7 @@ function newLeague(my, len) {
   ssReset();
   gameOuts = {};
   initFunds();
+  initMarket();
 }
 function saveLeague() {
   if (!league) return;
@@ -166,7 +167,7 @@ function exitLeague() {
   league = null;
   isSeason = false;
   cpuStaff = null;
-  ['leagueHub', 'leagueSetup', 'schedule', 'ledger'].forEach(id => ($(id).style.display = 'none'));
+  ['leagueHub', 'leagueSetup', 'schedule', 'ledger', 'market'].forEach(id => ($(id).style.display = 'none'));
 }
 
 // ---------- 오늘 경기 ----------
@@ -381,6 +382,7 @@ function finishMyMatch(myR, oppR, played) {
     league.yday = [r, ...others];
     league.day++;
     if (league.day >= league.sched.length) startPost();
+    else if (league.sched[league.day][0][2] === 1) cpuMarketMoves(); // 새 3연전 전에 컴퓨터 팀 이적
   } else postGameDone(r);
   saveLeague();
 }
@@ -552,8 +554,10 @@ function renderHub() {
       })
       .join('');
   // 어제 결과 또는 대진표
+  const news = league.news && league.news.length ? '<h3>이적 소식</h3>' + league.news.slice(0, 4).map(t => `<div class="lg-res">${t}</div>`).join('') : '';
   if (league.phase === 'reg')
     $('lgSide').innerHTML =
+      news +
       '<h3>지난 경기 결과</h3>' +
       (league.yday.length
         ? league.yday.map(r => `<div class="lg-res">${KBO_BY_CODE[r.a].short} ${r.as} : ${r.hs} ${KBO_BY_CODE[r.h].short}</div>`).join('')
@@ -622,6 +626,7 @@ function continueLeague() {
   seasonStats = s.stats || seasonStats;
   if (!seasonStats.b) ssReset();
   if (!league.funds) initFunds(); // 자금이 생기기 전 저장
+  initMarket();
   // 팀 편집에서 고친 KBO 선수 이름을 리그 선수단에도
   Object.values(league.rosters).forEach(R => {
     R.batters.forEach(p => KBO_PLAYERS[p[5]] && (p[0] = KBO_PLAYERS[p[5]].name));
@@ -678,6 +683,7 @@ onTap('lgLedger', () => {
   $('ledger').style.display = 'block';
 });
 onTap('ldClose', () => ($('ledger').style.display = 'none'));
+onTap('lgMarket', () => openMarket());
 onTap('lgSched', () => {
   renderSchedule();
   $('schedule').style.display = 'block';
