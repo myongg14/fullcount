@@ -138,7 +138,7 @@ function update(dt) {
       phase = 'pitch';
       pitch.t0 = now;
       pitch.rel = ball.position.clone();
-      pitch.t.d = Math.round(89000 / (pitch.kmh * 1.18));
+      pitch.t.d = Math.round(89000 / (pitch.kmh * 1.18) / (pitcherMode ? 1 : level().pitchSpeed));
       startSteal();
       if (pitcherMode) aiSwing();
       $('info').textContent =
@@ -160,7 +160,9 @@ function update(dt) {
       swing.done = true;
       resolveSwing();
     }
-    if (phase === 'pitch' && t >= 1.08) {
+    // 판정 시점: 공이 지나간 뒤 조금(루키는 늦은 스윙도 받아주도록 더 기다린다)
+    const judgeT = pitcherMode ? 1.08 : Math.max(1.08, 1 + (level().lateWindow * 1000) / pitch.t.d);
+    if (phase === 'pitch' && t >= judgeT) {
       let k = swing ? 'swingmiss' : inZone(pitch) ? 'strike' : 'ball';
       if (k === 'swingmiss' && (pitch.warp || pitch.fake)) $('info').textContent = '속았다!';
       if (
@@ -333,6 +335,6 @@ function frame(t) {
 }
 bases = [0, 0, 0];
 upgradeRealisticStadium();
-setTimeOfDay(3);
+setTimeOfDay(titleTod());
 // 첫 프레임 시작(모든 파일을 다 읽은 뒤)
 requestAnimationFrame(frame);

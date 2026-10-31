@@ -61,7 +61,7 @@ function startGame(pm, sw) {
   oppLine = [];
   myHits = 0;
   oppHits = 0;
-  totalInnings = 9;
+  totalInnings = isSeason ? 9 : SETTINGS.innings;
   myStamina = 100;
   cpuStamina = 100;
   myErrors = 0;
@@ -194,7 +194,7 @@ function nextPitch() {
   buntReq = false;
   cpuPitcherTick();
   rallyCheck();
-  setTimeOfDay(timeOfDayFor());
+  setTimeOfDay(SETTINGS.tod in TOD_INDEX ? TOD_INDEX[SETTINGS.tod] : timeOfDayFor());
   clearTrail();
   applyShift();
   dressAll();
@@ -607,7 +607,7 @@ function backToTitle() {
   });
   camera.zoom = 1;
   camera.updateProjectionMatrix();
-  setTimeOfDay(3);
+  setTimeOfDay(titleTod());
   // 화면 정리
   aimPointer = null;
   aimEl.style.display = 'none';

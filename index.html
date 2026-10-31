@@ -46,8 +46,25 @@
   <div class="big">⚾</div>
   <h1>나이트 베이스볼 3D</h1>
   <p>투수가 던진 공이 홈플레이트에 닿는 순간<br>화면을 탭해서 스윙!</p>
-  <p style="color:#9fb0e8;font-size:16px">9회 정식 경기 · 초엔 타자, 말엔 투수 시점으로 번갈아 뛰어요</p>
+  <p style="color:#9fb0e8;font-size:16px"><span id="modeText">9회 정식 경기</span> · 초엔 타자, 말엔 투수 시점으로 번갈아 뛰어요</p>
   <p style="color:#9fb0e8;font-size:15px">타자: 도루 버튼 · 안타 후 탭하면 한 베이스 더<br>투수: 구종 선택 → 화면을 드래그로 조준 → 손 떼면 투구 · 견제/고의사구 버튼</p>
+  <!-- 경기 설정(고른 값은 기기에 기억한다) -->
+  <div id="settings">
+    <div class="set-row">
+      <span class="set-label">난이도</span>
+      <div class="seg" data-key="level"><button data-v="rookie">루키</button><button data-v="pro">프로</button></div>
+      <span class="set-label">이닝</span>
+      <div class="seg" data-key="innings"><button data-v="3">3회</button><button data-v="6">6회</button><button data-v="9">9회</button></div>
+    </div>
+    <div class="set-row">
+      <span class="set-label">시간</span>
+      <div class="seg" data-key="tod"><button data-v="auto">자동</button><button data-v="day">낮</button><button data-v="evening">저녁</button><button data-v="night">밤</button></div>
+      <span class="set-label">소리</span>
+      <div class="seg" data-key="sound"><button data-v="on">켜기</button><button data-v="off">끄기</button></div>
+      <span class="set-label">음량</span>
+      <div id="volBar" aria-label="음량"><i id="volFill"></i></div>
+    </div>
+  </div>
   <div id="pc"></div>
   <button id="btn-ex">🏆 시즌 페넌트레이스 (9경기)</button>
   <button id="ho">내 타석: 선수별</button>

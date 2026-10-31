@@ -766,3 +766,69 @@ body.paused * {
   padding: 2px 6px;
   pointer-events: none;
 }
+
+/* 타이틀 화면 경기 설정 */
+#settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+#settings .set-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+#settings .set-label {
+  font-size: 15px;
+  color: #9fb0e8;
+  margin-left: 6px;
+}
+#settings .seg {
+  display: flex;
+  border: 2px solid #3a4468;
+  border-radius: 12px;
+  overflow: hidden;
+}
+#settings .seg button {
+  font: inherit;
+  font-size: 16px;
+  min-width: 56px;
+  min-height: 48px;
+  padding: 0 12px;
+  color: var(--cream);
+  background: rgba(20, 26, 60, 0.88);
+  border: 0;
+  border-left: 1px solid #3a4468;
+  touch-action: manipulation;
+}
+#settings .seg button:first-child {
+  border-left: 0;
+}
+#settings .seg button.on {
+  background: var(--gold);
+  color: var(--navy);
+}
+/* 음량 막대: 드래그해서 조절 */
+#volBar {
+  position: relative;
+  width: 130px;
+  height: 48px;
+  border-radius: 12px;
+  background: #2a3358;
+  border: 2px solid var(--gold);
+  overflow: hidden;
+  touch-action: none;
+}
+#volBar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--gold);
+}
+#volBar.off {
+  opacity: 0.4;
+}
