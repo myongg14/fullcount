@@ -288,7 +288,7 @@ function resolveSwing() {
   replayRec = [0, ball.position.x, ball.position.y, ball.position.z];
   replayT = 0;
   zone.visible = false;
-  batCrack();
+  batSound(q, k === 'foul');
   hitStop(k, q);
   if (k === 'hr') tone(880, 0.4, 0.1, 'triangle');
   hit.dist = 0;
@@ -322,6 +322,9 @@ function land() {
     );
     landX();
     cheer(hit.k === 'hr' ? 0.95 : r.good ? 0.5 : 0.2, hit.k === 'hr' ? 4 : 2);
+    if (hit.k === 'hr') roar('hr');
+    else if (hit.dv === 'ok') roar('play');
+    else if (r.good) roar('hit');
     if (hit.k === 'hr') {
       tone(660, 0.5, 0.1, 'triangle');
       organ(ph ? 'sad' : 'hr');

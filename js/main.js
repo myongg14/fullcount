@@ -170,6 +170,11 @@ function update(dt) {
     if (t <= 1.02) ball.position.copy(pitchPos(pitch, Math.min(t, 1)));
     else ball.visible = false;
     if (t <= 1.02) addTrail(ball.position);
+    // 공이 포수 미트에 꽂히는 '팡'(맞지 않은 공)
+    if (t >= 1 && !pitch.popped && (!swing || swing.miss)) {
+      pitch.popped = true;
+      mittPop(pitch.kmh);
+    }
     if (swing && !swing.done && now >= swing.contactT) {
       swing.done = true;
       resolveSwing();
@@ -181,6 +186,10 @@ function update(dt) {
       if (swing && !swing.done && !pitcherMode)
         showTimingMeter((swing.contactT - (pitch.t0 + pitch.t.d)) / 1000 / level().swingWindow);
       let k = swing ? 'swingmiss' : inZone(pitch) ? 'strike' : 'ball';
+      if (!pitch.popped) {
+        pitch.popped = true;
+        mittPop(pitch.kmh); // 너무 늦은 헛스윙
+      }
       if (k === 'swingmiss' && (pitch.warp || pitch.fake)) $('info').textContent = '속았다!';
       if (
         k === 'ball' &&
@@ -198,8 +207,11 @@ function update(dt) {
       pitchMark.material.color.set(inZone(pitch) ? 0x5fd16a : 0xe8453c);
       pitchMark.visible = true;
       {
-        const ss = endSteal(false);
-        showBanner(ss.e ? ss.t : countPitch(k), ss.e ? '' : ss.t, false);
+        const ss = endSteal(false),
+          txt = ss.e ? ss.t : countPitch(k);
+        showBanner(txt, ss.e ? '' : ss.t, false);
+        if (/삼진/.test(txt)) roar('strikeout');
+        else if (k === 'strike' || k === 'swingmiss') roar('strike');
       }
       updateHud();
       phase = 'wait';
