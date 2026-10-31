@@ -40,6 +40,8 @@ function updateHud() {
 }
 // 화면 가운데 큰 글자 배너를 띄운다
 function showBanner(t, sub, good) {
+  const call = umpireForBanner(t, sub);
+  if (call) umpireCall(call);
   const e = $('banner');
   e.innerHTML = `<b class="${good ? 'g' : ''}">${t}</b><small>${sub || ''}</small>`;
   e.classList.remove('show');
@@ -384,6 +386,7 @@ function openPause() {
   document.body.classList.add('paused');
   try {
     if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
   } catch (e) {}
 }
 // 이어하기
@@ -456,6 +459,7 @@ function setSetting(key, v) {
   if (key === 'sound' || key === 'volume') {
     unlockAudio();
     applyVolume();
+    if (!SETTINGS.sound && 'speechSynthesis' in window) speechSynthesis.cancel();
   }
 }
 // 설정 칸을 눌러도 경기가 시작되지 않게 막는다
