@@ -237,6 +237,7 @@ function draftPick(code, id) {
   else league.funds[code] = won1(league.funds[code] - bonus);
   league.salary[id] = GROWTH.rookieSalary;
   rec.v0 = valueOf(rec);
+  rec.ds = (league.season || 1) + (league.phase === 'stove' ? 1 : 0); // 신인으로 뛰는 시즌(신인왕)
   D.log.push(`${round + 1}R ${teamShort(code)}: ${rec.name}`);
   D.pick++;
   // 컴퓨터 팀은 자리가 넘치면 가장 약한 선수를 방출
@@ -269,6 +270,7 @@ function startOffseason() {
   stoveFreeAgents();
   startDraft(GROWTH.draftRounds, GROWTH.rookies, 'D');
   league.phase = 'stove';
+  league.seq = 0; // 시즌 끝 순서 화면: 상금부터
   league.msg = `스토브리그: 성장·나이 결과를 보고, 신인을 뽑고, FA를 데려오세요`;
   saveLeague();
 }
@@ -291,7 +293,10 @@ function startNextSeason() {
   league.draft = null;
   league.report = null;
   league.flow = { in: 0, out: 0 };
+  league.prizes = [];
+  league.seq = 0;
   league.finished = false;
+  trimLeague(false); // 은퇴·안 뽑힌 신인 기록 정리
   // 새 시즌 연봉(능력이 바뀌었으니 다시)
   Object.values(league.rosters).forEach(R => [...R.batters, ...R.pitchers].forEach(x => (league.salary[idOf(x)] = playerCard(x).salary)));
   ssReset();

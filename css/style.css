@@ -1578,3 +1578,59 @@ body.paused * {
   max-height: 22vh;
   overflow-y: auto;
 }
+
+/* ---------- 16단계: 시즌 끝 순서·구단 역사·처음부터 다시·팀 고르기·긴 목록 ---------- */
+.se-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+  font-size: 15px;
+  color: #6f7fb0;
+}
+.se-steps span.on {
+  color: var(--gold);
+  font-weight: 700;
+}
+.se-steps span.done {
+  color: #9fb0e8;
+}
+.se-steps b {
+  color: #3a4468;
+}
+.se-body {
+  font-size: 17px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+#seNext:disabled {
+  opacity: 0.4;
+}
+button.danger {
+  border-color: #a33 !important;
+  color: #ffb4b4 !important;
+}
+.set-sel {
+  font: inherit;
+  font-size: 16px;
+  min-height: 48px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 2px solid #3a4468;
+  background: #0c1433;
+  color: var(--cream);
+}
+/* 보이는 줄만 그리는 목록: 줄을 높이에 맞춰 겹치지 않게 놓는다 */
+.pl-list.vlist {
+  display: block;
+  position: relative;
+}
+.vl-pad {
+  position: relative;
+}
+.vlist .pl {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}

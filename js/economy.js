@@ -121,12 +121,13 @@ function payrollOf(code) {
   return won1([...R.batters, ...R.pitchers].reduce((s, x) => s + (league.salary[idOf(x)] != null ? league.salary[idOf(x)] : playerCard(x).salary), 0));
 }
 // 돈이 들어오고 나간다. 내 팀이면 내역과 이번 시즌 수입/지출에 남긴다
-function addMoney(code, amt, text) {
+function addMoney(code, amt, text, prize) {
   amt = won1(amt);
   if (!amt) return;
   league.funds[code] = won1(league.funds[code] + amt);
   if (code !== league.my) return;
-  league.ledger.unshift({ d: league.phase === 'reg' ? `${Math.min(league.day + 1, league.sched.length)}일째` : '포스트시즌', t: text, a: amt });
+  league.ledger.unshift({ d: league.phase === 'reg' ? `${Math.min(league.day + 1, league.sched.length)}일째` : league.phase === 'stove' ? '스토브리그' : '포스트시즌', t: text, a: amt });
+  if (prize) (league.prizes = league.prizes || []).push({ t: text, a: amt }); // 시즌 끝 '상금' 화면용
   league.ledger.length = Math.min(league.ledger.length, ECONOMY.ledgerMax);
   if (amt > 0) league.flow.in = won1(league.flow.in + amt);
   else league.flow.out = won1(league.flow.out - amt);

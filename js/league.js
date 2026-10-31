@@ -94,8 +94,16 @@ function saveLeague() {
   if (!league) return;
   syncMyRoster();
   try {
-    localStorage.setItem(LEAGUE_KEY, JSON.stringify({ league, stats: seasonStats }));
-  } catch (e) {}
+    localStorage.setItem(LEAGUE_KEY, leagueSaveText());
+  } catch (e) {
+    // 저장 공간이 모자라면 오래된 기록을 줄여서 다시
+    trimLeague(true);
+    try {
+      localStorage.setItem(LEAGUE_KEY, JSON.stringify({ league, stats: seasonStats }));
+    } catch (e2) {
+      league.msg = '⚠️ 기기 저장 공간이 모자라 저장하지 못했어요';
+    }
+  }
   renderLeagueButton();
 }
 function loadLeagueSave() {
@@ -119,7 +127,8 @@ function renderLeagueButton() {
   if (s) {
     const L = s.league,
       t = L.table[L.my];
-    $('btn-cont').textContent = `▶ 시즌 이어하기 (${KBO_BY_CODE[L.my].short} · ${L.phase === 'reg' ? `${L.day}/${L.sched.length}경기` : '포스트시즌'} · ${t.w}승 ${t.l}패)`;
+    const where = L.phase === 'reg' ? `${L.day}/${L.sched.length}경기 · ${t.w}승 ${t.l}패` : L.phase === 'stove' ? '스토브리그' : `포스트시즌 · ${t.w}승 ${t.l}패`;
+    $('btn-cont').textContent = `▶ 시즌 이어하기 (${KBO_BY_CODE[L.my].short} · ${L.season || 1}번째 시즌 · ${where})`;
   }
 }
 
@@ -153,6 +162,14 @@ function syncMyRoster() {
 // 리그에서 나와 한 경기 모드의 내 팀으로 되돌린다
 function exitLeague() {
   if (league && !league.finished) saveLeague();
+  restoreSingleTeam();
+  league = null;
+  isSeason = false;
+  cpuStaff = null;
+  ['leagueHub', 'leagueSetup', 'schedule', 'ledger', 'market', 'draft', 'train', 'seasonEnd', 'history'].forEach(id => ($(id).style.display = 'none'));
+}
+// 리그나 한 경기(팀 고르기)에서 바꿔 둔 내 팀을 원래 팀(팀 편집한 팀)으로
+function restoreSingleTeam() {
   if (singleTeam) {
     LINEUPS.m = singleTeam.lineup;
     MY_BENCH = singleTeam.bench;
@@ -167,10 +184,6 @@ function exitLeague() {
     renderPitcherButtons();
     dressAll();
   }
-  league = null;
-  isSeason = false;
-  cpuStaff = null;
-  ['leagueHub', 'leagueSetup', 'schedule', 'ledger', 'market', 'draft', 'train'].forEach(id => ($(id).style.display = 'none'));
 }
 
 // ---------- 오늘 경기 ----------
@@ -416,12 +429,7 @@ function autoMyGame() {
 // 창단 드래프트를 안 하고 경기를 시작하면 남은 지명을 자동으로(내 차례는 스카우트 평가가 좋은 신인)
 function finishDraftAuto() {
   if (league.phase !== 'reg' || draftDone()) return;
-  draftRunCpu();
-  while (draftTeam() === league.my) {
-    const best = league.draft.pool.reduce((a, id) => (league.extra[id].scoutStars > league.extra[a].scoutStars ? id : a));
-    draftPick(league.my, best);
-    draftRunCpu();
-  }
+  autoDraftMine();
   league.draft = null;
 }
 
@@ -436,8 +444,8 @@ function startPost() {
   league.post = { seeds, done: [], cur: makeSeries(0, seeds[3], seeds[4]), champ: null };
   league.msg += ` · 정규 시즌 끝! 1위 ${teamName(seeds[0])}`;
   // 순위 상금과 포스트시즌 진출금
-  rankList().forEach((c, i) => addMoney(c, ECONOMY.rankPrize[i], `정규 시즌 ${i + 1}위 상금`));
-  seeds.forEach(c => addMoney(c, ECONOMY.postEntry, '포스트시즌 진출'));
+  rankList().forEach((c, i) => addMoney(c, ECONOMY.rankPrize[i], `정규 시즌 ${i + 1}위 상금`, true));
+  seeds.forEach(c => addMoney(c, ECONOMY.postEntry, '포스트시즌 진출', true));
 }
 // 시리즈 다음 경기의 홈 팀(높은 순위 팀이 1·2차전 홈. 5전: 5차전도, 7전: 6·7차전도)
 function seriesHome(s) {
@@ -460,8 +468,8 @@ function postGameDone(r) {
   if (!s.winner) return;
   league.post.done.push(s);
   league.msg = `${POST_ROUNDS[s.r].label}: ${teamName(s.winner)} 승리!`;
-  addMoney(s.winner, ECONOMY.postSeriesWin, `${POST_ROUNDS[s.r].label} 승리`);
-  if (s.r === 3) addMoney(s.winner, ECONOMY.ksChampion, '한국시리즈 우승');
+  addMoney(s.winner, ECONOMY.postSeriesWin, `${POST_ROUNDS[s.r].label} 승리`, true);
+  if (s.r === 3) addMoney(s.winner, ECONOMY.ksChampion, '한국시리즈 우승', true);
   if (s.r === 3) {
     league.post.champ = s.winner;
     league.post.cur = null;
@@ -487,7 +495,7 @@ function simPostGame() {
 // ---------- 시즌 끝: 리그 타이틀 ----------
 function leagueAwards() {
   const games = league.sched.length,
-    team = id => (KBO_PLAYERS[id] ? KBO_BY_CODE[KBO_PLAYERS[id].team].short : ''),
+    team = id => teamTagOf(id),
     B = Object.entries(seasonStats.b).map(([id, x]) => ({ id, ...x })),
     P = Object.entries(seasonStats.p).map(([id, x]) => ({ id, ...x })),
     best = (list, f, low) => list.reduce((a, x) => (!a || (low ? f(x) < f(a) : f(x) > f(a)) ? x : a), null),
@@ -505,7 +513,7 @@ function leagueAwards() {
   add('평균자책', (x = best(qp, era, true)), x && era(x).toFixed(2));
   add('탈삼진', (x = best(P, y => y.k)), x && x.k + '개');
   add('세이브', (x = best(P, y => y.sv)), x && x.sv + '개');
-  return out;
+  return out.concat(honorAwards()); // 끝에 MVP·신인왕
 }
 // 시즌이 끝나면: 명예의 전당(한국시리즈 우승이면 우승 화면) → 저장 지우기
 function finishLeague() {
@@ -516,6 +524,8 @@ function finishLeague() {
   seasonStats.rs = t.rs;
   seasonStats.ra = t.ra;
   leagueEnding = { champ: league.post.champ, awards: leagueAwards() };
+  recordHistory(); // 구단 역사에 이번 시즌
+  saveLeague();
   $('leagueHub').style.display = 'none';
   showHof(league.post.champ === league.my);
 }
@@ -604,7 +614,8 @@ function renderHub() {
   $('lgPlay').style.display = mine ? '' : 'none';
   $('lgAuto').style.display = mine ? '' : 'none';
   $('lgPostNext').style.display = postOther ? '' : 'none';
-  $('lgEnd').style.display = league.phase === 'over' ? '' : 'none';
+  $('lgEnd').style.display = league.phase === 'over' || league.phase === 'stove' ? '' : 'none';
+  $('lgEnd').textContent = league.phase === 'stove' ? '📋 시즌 마무리 순서' : '🏆 시즌 마무리';
   const draftOpen = league.draft && !draftDone() && (league.phase === 'stove' || (league.phase === 'reg' && league.day === 0));
   $('lgDraft').style.display = draftOpen ? '' : 'none';
   $('lgDraft').textContent = league.phase === 'stove' ? '🎓 신인 드래프트' : '🎓 창단 드래프트';
@@ -659,11 +670,7 @@ function continueLeague() {
   if (!seasonStats.b) ssReset();
   if (!league.funds) initFunds(); // 자금이 생기기 전 저장
   initMarket();
-  // 팀 편집에서 고친 KBO 선수 이름을 리그 선수단에도
-  Object.values(league.rosters).forEach(R => {
-    R.batters.forEach(p => KBO_PLAYERS[p[5]] && (p[0] = KBO_PLAYERS[p[5]].name));
-    R.pitchers.forEach(P => KBO_PLAYERS[P.id] && (P.n = KBO_PLAYERS[P.id].name));
-  });
+  applyKboNamesToLeague(); // 팀 편집에서 고친 KBO 선수 이름을 리그 전체(선수단·FA·기록)에
   enterLeagueTeam();
   showHub();
 }
@@ -705,7 +712,9 @@ $('lsBack').addEventListener('click', () => {
 onTap('lgPlay', playMyGame);
 onTap('lgAuto', autoMyGame);
 onTap('lgPostNext', simPostGame);
-onTap('lgEnd', finishLeague);
+onTap('lgEnd', () => (league.phase === 'stove' ? openSeasonEnd() : finishLeague()));
+onTap('lgHistory', () => openHistory());
+onTap('lgReset', () => resetLeague());
 onTap('lgRoster', () => openLineup());
 onTap('lgLedger', () => {
   $('ldTable').innerHTML =

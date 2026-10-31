@@ -69,6 +69,11 @@
       <div class="seg" data-key="sound"><button data-v="on">켜기</button><button data-v="off">끄기</button></div>
       <span class="set-label">음량</span>
       <div id="volBar" aria-label="음량"><i id="volFill"></i></div>
+      <!-- 한 경기·홈런더비: KBO 10개 팀 중 두 팀 고르기 -->
+      <span class="set-label">팀</span>
+      <select id="matchMy" class="set-sel" aria-label="한 경기·홈런더비 내 팀"></select>
+      <span class="set-label">vs</span>
+      <select id="matchOpp" class="set-sel" aria-label="한 경기·홈런더비 상대 팀"></select>
     </div>
   </div>
   <div id="pc"></div>
@@ -190,8 +195,38 @@
       <button id="lgRoster">📋 선수단·선발</button>
       <button id="lgSched">📅 일정</button>
       <button id="lgLedger">💰 자금 내역</button>
+      <button id="lgHistory">📜 구단 역사</button>
       <button id="lgExit">💾 저장하고 나가기</button>
+      <button id="lgReset" class="danger">🗑 처음부터 다시</button>
     </div>
+  </div>
+</div>
+
+<!-- 시즌 끝 순서: 상금 → 나이·성장·은퇴 → 신인 드래프트 → FA 시장 → 다음 시즌(한 화면씩) -->
+<div id="seasonEnd" class="sheet">
+  <div class="sheet-box wide">
+    <div id="seSteps" class="se-steps"></div>
+    <h2 id="seTitle"></h2>
+    <div id="seBody" class="se-body"></div>
+    <div id="seAct" class="te-btns"></div>
+    <p id="seMsg" class="mk-msg"></p>
+    <div class="te-btns">
+      <button id="sePrev">◀ 이전</button>
+      <button id="seNext" class="te-main">다음 ▶</button>
+      <button id="seClose">리그 화면</button>
+    </div>
+  </div>
+</div>
+
+<!-- 구단 역사: 시즌별 순위·승패·포스트시즌·최고 선수, 통산 우승 -->
+<div id="history" class="sheet">
+  <div class="sheet-box wide">
+    <h2>📜 구단 역사</h2>
+    <p id="hiSum" class="lg-money"></p>
+    <table id="hiTable" class="lg-table"></table>
+    <h3>👋 은퇴 선수</h3>
+    <p id="hiRetired" class="mk-note"></p>
+    <div class="te-btns"><button id="hiClose" class="te-main">닫기</button></div>
   </div>
 </div>
 
@@ -301,6 +336,7 @@
 <script src="js/league.js"></script>
 <script src="js/market.js"></script>
 <script src="js/offseason.js"></script>
+<script src="js/club.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

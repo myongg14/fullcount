@@ -426,19 +426,21 @@ function renderMarket() {
   ]
     .map(([k, l]) => `<button data-t="${k}" class="${market.tab === k ? 'on' : ''}">${l}</button>`)
     .join('');
-  const list = marketList();
-  $('mkList').innerHTML = list.length
-    ? list
-        .map(({ x, team }) => {
-          const r = recordOf(x),
-            c = playerCard(x);
-          return `<button class="pl${market.sel === idOf(x) ? ' on' : ''}" data-id="${idOf(x)}">
+  const list = marketList(),
+    row = ({ x, team }) => {
+      const r = recordOf(x),
+        c = playerCard(x);
+      return `<button class="pl${market.sel === idOf(x) ? ' on' : ''}" data-id="${idOf(x)}">
           <b>${nameOf(x)} <small>${teamShort(team)} · ${r.type === 'B' ? r.pos : r.role === 'SP' ? '선발' : '불펜'} · ${r.age}세${r.v ? ' · 가상' : ''}</small></b>
           <span>OVR ${c.ovr} · ${'★'.repeat(potStars(r))}${'☆'.repeat(5 - potStars(r))} · 몸값 <i>${c.value}억</i> · 연봉 ${c.salary.toFixed(1)}억</span>
           <span>${seasonLine(x)}</span></button>`;
-        })
-        .join('')
-    : '<p class="mk-note">조건에 맞는 선수가 없어요</p>';
+    };
+  // 250명이 넘으니 화면에 보이는 줄만 그린다(iPad에서 버벅이지 않게)
+  if (list.length) virtualList($('mkList'), list, CLUB.rowH, row);
+  else {
+    $('mkList').__vl = null;
+    $('mkList').innerHTML = '<p class="mk-note">조건에 맞는 선수가 없어요</p>';
+  }
   renderMarketDetail();
   $('mkMsg').textContent = market.msg;
 }
