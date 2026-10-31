@@ -414,6 +414,7 @@ function finishMyMatch(myR, oppR, played) {
 function leagueGameOver(myR, oppR) {
   isSeason = false;
   finishMyMatch(myR, oppR, true);
+  if (mercyEnd) league.msg = `⏱ 콜드게임(${MERCY.runs}점 차)으로 끝났어요. ` + (league.msg || '');
   showHub();
 }
 // 이 경기 자동 진행(내 팀 경기도 결과만 계산)
